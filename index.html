@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 01</h2>
   <div>
     <div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div>
   </div>
@@ -32,8 +32,6 @@
   <div class="grid-container" id="relay-grid"></div>
 
   <script>
-    let relayStates = [false, false, false, false, false, false, false, false];
-
     function buildGrid() {
       let grid = document.getElementById('relay-grid');
       grid.innerHTML = '';
@@ -67,9 +65,8 @@
 
     function updateUI(data) {
       if (data.relays) {
-        relayStates = data.relays;
         for (let i = 0; i < 8; i++) {
-          let isOn = relayStates[i];
+          let isOn = (data.relays[i] === 1 || data.relays[i] === true);
           let btn = document.getElementById(`btn-${i}`);
           let statusText = document.getElementById(`status-text-${i}`);
           
@@ -145,9 +142,10 @@
     }
 
     function toggleRelay(id) {
-      // Dựa vào trạng thái thực tế hiện tại để đảo chiều gửi lệnh (nếu đang bật thì gửi 0 để tắt, ngược lại)
-      let newState = relayStates[id] ? 0 : 1;
-      let payload = JSON.stringify({ relay: id, state: newState });
+      let btn = document.getElementById(`btn-${id}`);
+      let targetState = btn.innerText.includes("TẮT") ? 0 : 1;
+
+      let payload = JSON.stringify({ relay: id, state: targetState });
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
       client.send(message);
