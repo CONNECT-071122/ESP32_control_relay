@@ -1,9 +1,9 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
   <title>Giám sát & Điều khiển 8 Relay</title>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
@@ -17,9 +17,7 @@
       padding: 20px;
     }
 
-    h2 {
-      color: #333;
-    }
+    h2 { color: #333; }
 
     .status-box {
       background: white;
@@ -70,22 +68,15 @@
       margin-top: 6px;
     }
 
-    .btn-on {
-      background: #28a745;
-    }
-
-    .btn-off {
-      background: #dc3545;
-    }
+    .btn-on { background: #28a745; }
+    .btn-off { background: #dc3545; }
 
     .btn-timer {
       background: #17a2b8;
       margin-top: 10px;
     }
 
-    .btn-name {
-      background: #6c757d;
-    }
+    .btn-name { background: #6c757d; }
 
     .sub-status {
       font-size: 12px;
@@ -154,7 +145,7 @@
 
 <body>
 
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 01</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 02</h2>
 
   <div>
     <div class="status-box" id="mqtt-status">
@@ -195,11 +186,9 @@
     // =================================
     function buildGrid() {
       let grid = document.getElementById("relay-grid");
-
       grid.innerHTML = "";
 
       for (let i = 0; i < 8; i++) {
-
         let card = `
           <div class="card">
 
@@ -218,7 +207,6 @@
               Trạng thái: Đang Tắt
             </div>
 
-            <!-- ĐỔI TÊN RELAY -->
             <input
               class="relay-name-input"
               type="text"
@@ -234,19 +222,15 @@
               Lưu tên
             </button>
 
-            <div
-              class="name-note"
-              id="name-note-${i}">
-            </div>
+            <div class="name-note" id="name-note-${i}"></div>
 
-            <!-- HẸN GIỜ -->
             <div class="schedule-box">
 
               <label>
                 <input
                   type="checkbox"
                   id="en-${i}"
-                  onchange="scheduleEdited(${i})">
+                  onchange="scheduleEnableChanged(${i})">
                 Hẹn giờ trong ngày
               </label>
 
@@ -296,10 +280,7 @@
                 Lưu Lịch
               </button>
 
-              <div
-                class="schedule-note"
-                id="schedule-note-${i}">
-              </div>
+              <div class="schedule-note" id="schedule-note-${i}"></div>
 
             </div>
           </div>
@@ -317,7 +298,6 @@
         alert("MQTT chưa kết nối!");
         return false;
       }
-
       return true;
     }
 
@@ -332,7 +312,6 @@
       );
 
       message.destinationName = CONTROL_TOPIC;
-
       client.send(message);
 
       return true;
@@ -342,7 +321,6 @@
     // ĐIỀU KHIỂN RELAY
     // =================================
     function toggleRelay(id) {
-
       let btn = document.getElementById(`btn-${id}`);
 
       let targetState =
@@ -358,7 +336,6 @@
     // ĐỔI TÊN RELAY
     // =================================
     function relayNameEdited(id) {
-
       nameDirty[id] = true;
 
       let note =
@@ -369,9 +346,7 @@
     }
 
     function saveRelayName(id) {
-
-      let input =
-        document.getElementById(`name-${id}`);
+      let input = document.getElementById(`name-${id}`);
 
       let newName = input.value.trim();
 
@@ -380,7 +355,6 @@
       }
 
       newName = newName.substring(0, 24);
-
       input.value = newName;
 
       if (!mqttConnected()) return;
@@ -404,7 +378,6 @@
     // HẸN GIỜ RELAY
     // =================================
     function scheduleEdited(id) {
-
       scheduleDirty[id] = true;
 
       let note =
@@ -415,7 +388,6 @@
     }
 
     function getScheduleValues(id) {
-
       return {
         en: document.getElementById(`en-${id}`).checked,
 
@@ -437,8 +409,44 @@
       };
     }
 
-    function saveSchedule(id) {
+    // =================================
+    // TÍCH / BỎ TÍCH HẸN GIỜ NGAY LẬP TỨC
+    // =================================
+    function scheduleEnableChanged(id) {
 
+      if (!mqttConnected()) {
+        // Khôi phục checkbox theo trạng thái ESP đã xác nhận
+        return;
+      }
+
+      let sch = getScheduleValues(id);
+
+      pendingSchedules[id] = {...sch};
+      scheduleDirty[id] = true;
+
+      let note =
+        document.getElementById(`schedule-note-${id}`);
+
+      note.innerText = sch.en
+        ? "Đang bật chế độ hẹn giờ..."
+        : "Đang tắt chế độ hẹn giờ...";
+
+      note.style.color = "#17a2b8";
+
+      sendMQTT({
+        schedule_relay: id,
+        enable: sch.en,
+        on_h: sch.on_h,
+        on_m: sch.on_m,
+        off_h: sch.off_h,
+        off_m: sch.off_m
+      });
+    }
+
+    // =================================
+    // LƯU LỊCH
+    // =================================
+    function saveSchedule(id) {
       let sch = getScheduleValues(id);
 
       if (
@@ -480,7 +488,6 @@
     // SO SÁNH LỊCH ESP32 PHẢN HỒI
     // =================================
     function sameSchedule(a, b) {
-
       if (!a || !b) return false;
 
       return (
@@ -497,20 +504,14 @@
     // =================================
     function updateUI(data) {
 
-      // --------------------------------
       // CẬP NHẬT TRẠNG THÁI RELAY
-      // --------------------------------
       if (data.relays) {
-
         for (let i = 0; i < 8; i++) {
-
           let isOn =
             data.relays[i] === 1 ||
             data.relays[i] === true;
 
-          let btn =
-            document.getElementById(`btn-${i}`);
-
+          let btn = document.getElementById(`btn-${i}`);
           let statusText =
             document.getElementById(`status-text-${i}`);
 
@@ -528,33 +529,21 @@
         }
       }
 
-      // --------------------------------
       // CẬP NHẬT TÊN RELAY
-      // --------------------------------
       if (data.names) {
-
         for (let i = 0; i < 8; i++) {
-
           let receivedName = data.names[i];
-
           if (!receivedName) continue;
 
-          let input =
-            document.getElementById(`name-${i}`);
-
-          let title =
-            document.getElementById(`title-${i}`);
-
-          let note =
-            document.getElementById(`name-note-${i}`);
+          let input = document.getElementById(`name-${i}`);
+          let title = document.getElementById(`title-${i}`);
+          let note = document.getElementById(`name-note-${i}`);
 
           if (!nameDirty[i]) {
-
             input.value = receivedName;
             title.innerText = receivedName;
 
           } else if (receivedName === pendingNames[i]) {
-
             nameDirty[i] = false;
             pendingNames[i] = "";
 
@@ -567,57 +556,35 @@
         }
       }
 
-      // --------------------------------
       // CẬP NHẬT LỊCH
-      // --------------------------------
       if (data.schedules) {
-
         for (let i = 0; i < 8; i++) {
-
           let sch = data.schedules[i];
-
           if (!sch) continue;
 
-          let chkBox =
-            document.getElementById(`en-${i}`);
-
-          let onH =
-            document.getElementById(`on-h-${i}`);
-
-          let onM =
-            document.getElementById(`on-m-${i}`);
-
-          let offH =
-            document.getElementById(`off-h-${i}`);
-
-          let offM =
-            document.getElementById(`off-m-${i}`);
-
-          let note =
-            document.getElementById(`schedule-note-${i}`);
+          let chkBox = document.getElementById(`en-${i}`);
+          let onH = document.getElementById(`on-h-${i}`);
+          let onM = document.getElementById(`on-m-${i}`);
+          let offH = document.getElementById(`off-h-${i}`);
+          let offM = document.getElementById(`off-m-${i}`);
+          let note = document.getElementById(`schedule-note-${i}`);
 
           if (!scheduleDirty[i]) {
-
             chkBox.checked = Boolean(sch.en);
-
             onH.value = sch.on_h;
             onM.value = sch.on_m;
-
             offH.value = sch.off_h;
             offM.value = sch.off_m;
 
           } else if (
             sameSchedule(sch, pendingSchedules[i])
           ) {
-
             scheduleDirty[i] = false;
             pendingSchedules[i] = null;
 
             chkBox.checked = Boolean(sch.en);
-
             onH.value = sch.on_h;
             onM.value = sch.on_m;
-
             offH.value = sch.off_h;
             offM.value = sch.off_m;
 
@@ -632,9 +599,7 @@
     // MQTT NHẬN DỮ LIỆU
     // =================================
     client.onMessageArrived = function(message) {
-
       if (message.destinationName === STATUS_TOPIC) {
-
         try {
           let data = JSON.parse(message.payloadString);
           updateUI(data);
@@ -648,9 +613,7 @@
     // MQTT MẤT KẾT NỐI
     // =================================
     client.onConnectionLost = function(responseObject) {
-
-      let st =
-        document.getElementById("mqtt-status");
+      let st = document.getElementById("mqtt-status");
 
       st.innerText = "Trạng thái MQTT: Mất kết nối!";
       st.style.color = "red";
@@ -667,17 +630,13 @@
     // KẾT NỐI MQTT
     // =================================
     function startConnect() {
-
       if (client.isConnected()) return;
 
       client.connect({
-
         useSSL: true,
 
         onSuccess: function() {
-
-          let st =
-            document.getElementById("mqtt-status");
+          let st = document.getElementById("mqtt-status");
 
           st.innerText =
             "Trạng thái MQTT: Đã kết nối thành công!";
@@ -688,9 +647,7 @@
         },
 
         onFailure: function(error) {
-
-          let st =
-            document.getElementById("mqtt-status");
+          let st = document.getElementById("mqtt-status");
 
           st.innerText =
             "Trạng thái MQTT: Kết nối thất bại!";
