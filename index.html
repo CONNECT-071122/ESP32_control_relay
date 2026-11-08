@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 02</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY</h2>
   <div>
     <div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div>
   </div>
@@ -73,6 +73,7 @@
       }
     }
 
+    // Cập nhật UI hoàn toàn dựa trên trạng thái thực tế từ ESP32 gửi về
     function updateUI(data) {
       if (data.relays) {
         relayStates = data.relays;
@@ -115,7 +116,8 @@
 
     buildGrid();
 
-    let client = new Paho.MQTT.Client("broker.hivemq.com", 8884, "web_relay_" + parseInt(Math.random() * 100000));
+    let clientId = "web_relay_" + Math.random().toString(16).substring(2, 8);
+    let client = new Paho.MQTT.Client("broker.hivemq.com", 8884, clientId);
 
     client.onConnectionLost = function (responseObject) {
       let st = document.getElementById("mqtt-status");
@@ -156,13 +158,13 @@
       let payload = JSON.stringify({ relay: id, state: newState });
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
-      client.send(message);
+      client.send(message); // Chỉ gửi lệnh lên, giao diện sẽ chờ phản hồi thực tế từ ESP32 rồi mới đổi màu
     }
 
     function saveSchedule(id) {
       let enabled = document.getElementById(`en-${id}`).checked;
       let onH = parseInt(document.getElementById(`on-h-${id}`).value) || 0;
-      let onM = parseInt(document.getElementById(`on-m-${id}`).value) || 0; // Đã sửa chuẩn dấu ngoặc ở đây
+      let onM = parseInt(document.getElementById(`on-m-${id}`).value) || 0;
       let offH = parseInt(document.getElementById(`off-h-${id}`).value) || 0;
       let offM = parseInt(document.getElementById(`off-m-${id}`).value) || 0;
 
