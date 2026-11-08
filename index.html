@@ -65,17 +65,20 @@
 
     function updateUI(data) {
       if (data.relays) {
+        let relayStates = data.relays; // Nhận mảng trạng thái từ ESP32 (true/false)
         for (let i = 0; i < 8; i++) {
-          let isOn = data.relays[i];
+          let isOn = relayStates[i];
           let btn = document.getElementById(`btn-${i}`);
           let statusText = document.getElementById(`status-text-${i}`);
           
           if (btn && statusText) {
             if (isOn) {
+              // Nếu thực tế đang BẬT: Đổi nút thành màu ĐỎ, hiển thị chữ "TẮT (OFF)" để bấm tắt
               btn.className = "btn btn-off";
               btn.innerText = "TẮT (OFF)";
               statusText.innerText = "Trạng thái: Đang Bật";
             } else {
+              // Nếu thực tế đang TẮT: Đổi nút thành màu XANH, hiển thị chữ "BẬT (ON)" để bấm bật
               btn.className = "btn btn-on";
               btn.innerText = "BẬT (ON)";
               statusText.innerText = "Trạng thái: Đang Tắt";
