@@ -41,17 +41,15 @@
   <script>
     let relayStates = [false, false, false, false, false, false, false, false];
 
-    function renderRelays() {
+    // Chỉ tạo khung HTML 1 lần duy nhất khi mở trang
+    function buildGrid() {
       let grid = document.getElementById('relay-grid');
       grid.innerHTML = '';
       for (let i = 0; i < 8; i++) {
-        let isOn = relayStates[i];
-        let btnClass = isOn ? 'btn btn-off' : 'btn btn-on';
-        let btnText = isOn ? 'TẮT (OFF)' : 'BẬT (ON)';
         let card = `<div class="card">
                       <p class="title">Relay ${i + 1}</p>
-                      <button class="${btnClass}" onclick="toggleRelay(${i})">${btnText}</button>
-                      <div class="sub-status">Trạng thái: ${isOn ? 'Đang Bật' : 'Đang Tắt'}</div>
+                      <button class="btn btn-on" id="btn-${i}" onclick="toggleRelay(${i})">BẬT (ON)</button>
+                      <div class="sub-status" id="status-text-${i}">Trạng thái: Đang Tắt</div>
                       
                       <div class="schedule-box">
                         <label><input type="checkbox" id="en-${i}"> <b>Hẹn giờ trong ngày</b></label>
@@ -66,7 +64,28 @@
       }
     }
 
-    renderRelays();
+    // Chỉ cập nhật trạng thái nút và chữ, không làm mất dữ liệu người dùng đang nhập
+    function updateRelaysUI() {
+      for (let i = 0; i < 8; i++) {
+        let isOn = relayStates[i];
+        let btn = document.getElementById(`btn-${i}`);
+        let statusText = document.getElementById(`status-text-${i}`);
+        
+        if (btn && statusText) {
+          if (isOn) {
+            btn.className = "btn btn-off";
+            btn.innerText = "TẮT (OFF)";
+            statusText.innerText = "Trạng thái: Đang Bật";
+          } else {
+            btn.className = "btn btn-on";
+            btn.innerText = "BẬT (ON)";
+            statusText.innerText = "Trạng thái: Đang Tắt";
+          }
+        }
+      }
+    }
+
+    buildGrid();
 
     let client = new Paho.MQTT.Client("broker.hivemq.com", 8884, "web_relay_" + parseInt(Math.random() * 100000));
 
@@ -83,7 +102,7 @@
           let data = JSON.parse(message.payloadString);
           if (data.relays) {
             relayStates = data.relays;
-            renderRelays();
+            updateRelaysUI(); // Cập nhật giao diện an toàn
           }
         } catch(e) {}
       }
