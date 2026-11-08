@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 01</h2>
   <div>
     <div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div>
   </div>
@@ -32,8 +32,6 @@
   <div class="grid-container" id="relay-grid"></div>
 
   <script>
-    let relayStates = [false, false, false, false, false, false, false, false];
-
     function buildGrid() {
       let grid = document.getElementById('relay-grid');
       grid.innerHTML = '';
@@ -67,9 +65,8 @@
 
     function updateUI(data) {
       if (data.relays) {
-        relayStates = data.relays;
         for (let i = 0; i < 8; i++) {
-          let isOn = relayStates[i];
+          let isOn = data.relays[i];
           let btn = document.getElementById(`btn-${i}`);
           let statusText = document.getElementById(`status-text-${i}`);
           
@@ -144,9 +141,17 @@
       });
     }
 
+    // Hàm điều khiển trực tiếp dựa vào nhãn chữ trên nút bấm, loại bỏ hoàn toàn lỗi kẹt biến
     function toggleRelay(id) {
-      let newState = !relayStates[id] ? 1 : 0;
-      let payload = JSON.stringify({ relay: id, state: newState });
+      let btn = document.getElementById(`btn-${id}`);
+      let targetState = 1; // Mặc định là muốn Bật
+      
+      // Nếu nút đang hiển thị chữ TẮT, nghĩa là relay đang bật, ta phải gửi lệnh 0 để tắt
+      if (btn.innerText.includes("TẮT")) {
+        targetState = 0;
+      }
+
+      let payload = JSON.stringify({ relay: id, state: targetState });
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
       client.send(message);
@@ -155,7 +160,7 @@
     function saveSchedule(id) {
       let enabled = document.getElementById(`en-${id}`).checked;
       let onH = parseInt(document.getElementById(`on-h-${id}`).value) || 0;
-      let onM = parseInt(document.getElementById(`on-m-${id}`.value)) || 0;
+      let onM = parseInt(document.getElementById(`on-m-${id}`).value) || 0;
       let offH = parseInt(document.getElementById(`off-h-${id}`).value) || 0;
       let offM = parseInt(document.getElementById(`off-m-${id}`).value) || 0;
 
