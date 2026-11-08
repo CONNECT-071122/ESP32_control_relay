@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY </h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY</h2>
   <div>
     <div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div>
   </div>
@@ -32,6 +32,9 @@
   <div class="grid-container" id="relay-grid"></div>
 
   <script>
+    // Mảng lưu trạng thái tại chỗ cho 8 relay
+    let relayStates = [false, false, false, false, false, false, false, false];
+
     function buildGrid() {
       let grid = document.getElementById('relay-grid');
       grid.innerHTML = '';
@@ -65,7 +68,7 @@
 
     function updateUI(data) {
       if (data.relays) {
-        let relayStates = data.relays; // Nhận mảng trạng thái từ ESP32 (true/false)
+        relayStates = data.relays;
         for (let i = 0; i < 8; i++) {
           let isOn = relayStates[i];
           let btn = document.getElementById(`btn-${i}`);
@@ -73,12 +76,10 @@
           
           if (btn && statusText) {
             if (isOn) {
-              // Nếu thực tế đang BẬT: Đổi nút thành màu ĐỎ, hiển thị chữ "TẮT (OFF)" để bấm tắt
               btn.className = "btn btn-off";
               btn.innerText = "TẮT (OFF)";
               statusText.innerText = "Trạng thái: Đang Bật";
             } else {
-              // Nếu thực tế đang TẮT: Đổi nút thành màu XANH, hiển thị chữ "BẬT (ON)" để bấm bật
               btn.className = "btn btn-on";
               btn.innerText = "BẬT (ON)";
               statusText.innerText = "Trạng thái: Đang Tắt";
@@ -144,17 +145,27 @@
       });
     }
 
-    // Hàm điều khiển trực tiếp dựa vào nhãn chữ trên nút bấm, loại bỏ hoàn toàn lỗi kẹt biến
+    // Hàm điều khiển đảo trạng thái trực tiếp mượt mà tuyệt đối
     function toggleRelay(id) {
+      // Đảo trạng thái ngay lập tức trên giao diện
+      relayStates[id] = !relayStates[id];
+      let newState = relayStates[id] ? 1 : 0;
+
+      // Cập nhật giao diện ngay lập tức
       let btn = document.getElementById(`btn-${id}`);
-      let targetState = 1; // Mặc định là muốn Bật
-      
-      // Nếu nút đang hiển thị chữ TẮT, nghĩa là relay đang bật, ta phải gửi lệnh 0 để tắt
-      if (btn.innerText.includes("TẮT")) {
-        targetState = 0;
+      let statusText = document.getElementById(`status-text-${id}`);
+      if (relayStates[id]) {
+        btn.className = "btn btn-off";
+        btn.innerText = "TẮT (OFF)";
+        statusText.innerText = "Trạng thái: Đang Bật";
+      } else {
+        btn.className = "btn btn-on";
+        btn.innerText = "BẬT (ON)";
+        statusText.innerText = "Trạng thái: Đang Tắt";
       }
 
-      let payload = JSON.stringify({ relay: id, state: targetState });
+      // Gửi lệnh qua MQTT lên ESP32
+      let payload = JSON.stringify({ relay: id, state: newState });
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
       client.send(message);
