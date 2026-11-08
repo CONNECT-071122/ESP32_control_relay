@@ -21,7 +21,7 @@
     .sub-status { font-size: 12px; color: #777; margin-top: 5px; text-align: center; }
     .schedule-box { margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; font-size: 12px; color: #444; }
     .schedule-box label { display: block; margin-top: 4px; }
-    .schedule-box input { width: 100%; padding: 4px; box-sizing: border-box; margin-top: 2px; }
+    .schedule-box input[type="text"] { width: 100%; padding: 5px; box-sizing: border-box; margin-top: 2px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -41,7 +41,6 @@
   <script>
     let relayStates = [false, false, false, false, false, false, false, false];
 
-    // Chỉ tạo khung HTML 1 lần duy nhất khi mở trang
     function buildGrid() {
       let grid = document.getElementById('relay-grid');
       grid.innerHTML = '';
@@ -53,10 +52,10 @@
                       
                       <div class="schedule-box">
                         <label><input type="checkbox" id="en-${i}"> <b>Hẹn giờ trong ngày</b></label>
-                        <label>Bật lúc:</label>
-                        <input type="time" id="on-time-${i}" value="06:00">
-                        <label>Tắt lúc:</label>
-                        <input type="time" id="off-time-${i}" value="22:00">
+                        <label>Bật lúc (HH:MM - 24h):</label>
+                        <input type="text" id="on-time-${i}" value="06:00" placeholder="VD: 16:52">
+                        <label>Tắt lúc (HH:MM - 24h):</label>
+                        <input type="text" id="off-time-${i}" value="22:00" placeholder="VD: 22:00">
                         <button class="btn btn-timer" onclick="saveSchedule(${i})">Lưu Lịch</button>
                       </div>
                     </div>`;
@@ -64,7 +63,6 @@
       }
     }
 
-    // Chỉ cập nhật trạng thái nút và chữ, không làm mất dữ liệu người dùng đang nhập
     function updateRelaysUI() {
       for (let i = 0; i < 8; i++) {
         let isOn = relayStates[i];
@@ -102,7 +100,7 @@
           let data = JSON.parse(message.payloadString);
           if (data.relays) {
             relayStates = data.relays;
-            updateRelaysUI(); // Cập nhật giao diện an toàn
+            updateRelaysUI();
           }
         } catch(e) {}
       }
@@ -136,17 +134,17 @@
 
     function saveSchedule(id) {
       let enabled = document.getElementById(`en-${id}`).checked;
-      let onTimeStr = document.getElementById(`on-time-${id}`).value;
-      let offTimeStr = document.getElementById(`off-time-${id}`).value;
+      let onTimeStr = document.getElementById(`on-time-${id}`).value.trim();
+      let offTimeStr = document.getElementById(`off-time-${id}`).value.trim();
 
       let onH = -1, onM = -1, offH = -1, offM = -1;
 
-      if (onTimeStr) {
+      if (onTimeStr.includes(":")) {
         let parts = onTimeStr.split(":");
         onH = parseInt(parts[0]);
         onM = parseInt(parts[1]);
       }
-      if (offTimeStr) {
+      if (offTimeStr.includes(":")) {
         let parts = offTimeStr.split(":");
         offH = parseInt(parts[0]);
         offM = parseInt(parts[1]);
@@ -164,7 +162,7 @@
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
       client.send(message);
-      alert(`Đã cập nhật lịch hẹn giờ cho Relay ${id + 1}!`);
+      alert(`Đã lưu lịch Relay ${id + 1}: Bật lúc ${onH}:${onM} - Tắt lúc ${offH}:${offM}`);
     }
 
     function triggerOTA() {
