@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Giám sát & Điều khiển 8 Relay</title>
+<title>Điều khiển 8 Relay ESP32</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
 
@@ -261,7 +261,9 @@ button {
 
 <div class="mqtt-status">
     MQTT:
-    <span id="mqtt-status" class="status-offline">Đang kết nối...</span>
+    <span id="mqtt-status" class="status-offline">
+        Đang khởi tạo...
+    </span>
 </div>
 
 <!-- OTA -->
@@ -291,6 +293,7 @@ button {
 <div id="relay-grid"></div>
 
 <script>
+
 /* ================= MQTT CONFIG ================= */
 
 const MQTT_HOST = "broker.hivemq.com";
@@ -302,8 +305,10 @@ const STATUS_TOPIC = "esp32/relay8/status";
 
 let client = null;
 let mqttIsConnected = false;
+let reconnectTimer = null;
 
 let relayStates = Array(8).fill(false);
+
 let relayNames = Array.from(
     {length: 8},
     (_, i) => "Relay " + (i + 1)
@@ -473,8 +478,9 @@ function sendMQTT(data) {
         client.send(message);
 
         return true;
+
     } catch (error) {
-        console.log("MQTT SEND ERROR:", error);
+        console.error("MQTT SEND ERROR:", error);
         return false;
     }
 }
@@ -568,8 +574,11 @@ function saveSchedule(id) {
         return;
     }
 
-    if (values.en && values.on_h === values.off_h &&
-        values.on_m === values.off_m) {
+    if (
+        values.en &&
+        values.on_h === values.off_h &&
+        values.on_m === values.off_m
+    ) {
         alert("Giờ bật và giờ tắt không được trùng nhau!");
         return;
     }
@@ -591,7 +600,9 @@ function saveSchedule(id) {
 function updateUI(data) {
 
     /* OTA STATUS */
+
     if (data.ota !== undefined) {
+
         if (data.ota === "downloading") {
             otaRequested = true;
             otaStarted = true;
@@ -642,7 +653,11 @@ function updateUI(data) {
                 0
             );
 
-        } else if (data.ota === "idle" && otaRequested && otaStarted) {
+        } else if (
+            data.ota === "idle" &&
+            otaRequested &&
+            otaStarted
+        ) {
             otaRequested = false;
             otaStarted = false;
 
@@ -655,14 +670,18 @@ function updateUI(data) {
     }
 
     /* RELAY STATES */
+
     if (Array.isArray(data.relays)) {
         data.relays.forEach((state, i) => {
             if (i >= 8) return;
 
             relayStates[i] = Boolean(state);
 
-            const stateEl = document.getElementById("relay-state-" + i);
-            const btn = document.getElementById("relay-btn-" + i);
+            const stateEl =
+                document.getElementById("relay-state-" + i);
+
+            const btn =
+                document.getElementById("relay-btn-" + i);
 
             if (relayStates[i]) {
                 stateEl.innerText = "ON";
@@ -691,6 +710,7 @@ function updateUI(data) {
     }
 
     /* RELAY NAMES */
+
     if (Array.isArray(data.names)) {
         data.names.forEach((name, i) => {
             if (i >= 8) return;
@@ -706,6 +726,7 @@ function updateUI(data) {
     }
 
     /* SCHEDULES */
+
     if (Array.isArray(data.schedules)) {
         data.schedules.forEach((schedule, i) => {
             if (i >= 8) return;
@@ -735,8 +756,11 @@ function updateUI(data) {
                     relaySchedules[i].off_m;
             }
 
-            const info = document.getElementById("schedule-info-" + i);
-            const btn = document.getElementById("schedule-btn-" + i);
+            const info =
+                document.getElementById("schedule-info-" + i);
+
+            const btn =
+                document.getElementById("schedule-btn-" + i);
 
             if (relaySchedules[i].en) {
                 info.innerText =
@@ -802,7 +826,7 @@ function startOTA() {
             0
         );
 
-        console.log("OTA SEND ERROR:", error);
+        console.error("OTA SEND ERROR:", error);
     }
 }
 
@@ -812,75 +836,118 @@ function onMessageArrived(message) {
     try {
         const data = JSON.parse(message.payloadString);
         updateUI(data);
+
     } catch (error) {
-        console.log("JSON ERROR:", error);
+        console.error("JSON ERROR:", error);
+        console.log("MQTT MESSAGE:", message.payloadString);
     }
 }
 
 /* ================= MQTT CONNECTION ================= */
 
 function startConnect() {
+    const status = document.getElementById("mqtt-status");
+
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+    }
+
+    status.innerText = "Đang khởi tạo MQTT...";
+    status.className = "status-offline";
+
+    if (typeof Paho === "undefined" || !Paho.MQTT) {
+        status.innerText = "LỖI: Không tải được thư viện MQTT";
+        console.error("Paho MQTT library is not loaded!");
+
+        reconnectTimer = setTimeout(startConnect, 5000);
+        return;
+    }
+
     const clientId = "ESP32_WEB_" +
         Math.random().toString(16).substring(2, 10);
 
-    client = new Paho.MQTT.Client(
-        MQTT_HOST,
-        MQTT_PORT,
-        MQTT_PATH,
-        clientId
-    );
+    try {
+        client = new Paho.MQTT.Client(
+            MQTT_HOST,
+            MQTT_PORT,
+            MQTT_PATH,
+            clientId
+        );
 
-    client.onConnectionLost = function(response) {
-        mqttIsConnected = false;
-
-        const status = document.getElementById("mqtt-status");
-        status.innerText = "Mất kết nối";
-        status.className = "status-offline";
-
-        if (otaStarted) {
-            setOTAStatus(
-                "ESP32 đang cập nhật hoặc khởi động lại...",
-                "#17a2b8",
-                75
-            );
-        }
-
-        console.log("MQTT LOST:", response.errorMessage);
-
-        setTimeout(startConnect, 5000);
-    };
-
-    client.onMessageArrived = onMessageArrived;
-
-    client.connect({
-        useSSL: true,
-        timeout: 10,
-        keepAliveInterval: 30,
-
-        onSuccess: function() {
-            mqttIsConnected = true;
-
-            const status = document.getElementById("mqtt-status");
-            status.innerText = "Đã kết nối";
-            status.className = "status-online";
-
-            console.log("MQTT CONNECTED");
-
-            client.subscribe(STATUS_TOPIC);
-        },
-
-        onFailure: function(error) {
+        client.onConnectionLost = function(response) {
             mqttIsConnected = false;
 
-            const status = document.getElementById("mqtt-status");
-            status.innerText = "Kết nối thất bại";
+            status.innerText = "Mất kết nối MQTT";
             status.className = "status-offline";
 
-            console.log("MQTT ERROR:", error.errorMessage);
+            console.error("MQTT CONNECTION LOST:", response);
 
-            setTimeout(startConnect, 5000);
-        }
-    });
+            if (otaStarted) {
+                setOTAStatus(
+                    "ESP32 đang cập nhật hoặc khởi động lại...",
+                    "#17a2b8",
+                    75
+                );
+            }
+
+            reconnectTimer = setTimeout(startConnect, 5000);
+        };
+
+        client.onMessageArrived = onMessageArrived;
+
+        status.innerText = "Đang kết nối HiveMQ...";
+
+        console.log("Đang kết nối HiveMQ...");
+
+        client.connect({
+            useSSL: true,
+            timeout: 15,
+            keepAliveInterval: 30,
+
+            onSuccess: function() {
+                mqttIsConnected = true;
+
+                status.innerText = "ĐÃ KẾT NỐI MQTT";
+                status.className = "status-online";
+
+                console.log("MQTT CONNECTED SUCCESSFULLY");
+
+                client.subscribe(STATUS_TOPIC, {
+                    onSuccess: function() {
+                        console.log("Đã đăng ký topic:", STATUS_TOPIC);
+                    },
+
+                    onFailure: function(error) {
+                        console.error("SUBSCRIBE ERROR:", error);
+                    }
+                });
+            },
+
+            onFailure: function(error) {
+                mqttIsConnected = false;
+
+                status.innerText = "MQTT LỖI: " +
+                    (error.errorMessage || "Không xác định");
+
+                status.className = "status-offline";
+
+                console.error("MQTT CONNECT FAILED:", error);
+
+                reconnectTimer = setTimeout(startConnect, 5000);
+            }
+        });
+
+    } catch (error) {
+        mqttIsConnected = false;
+
+        status.innerText = "LỖI KHỞI TẠO MQTT";
+        status.className = "status-offline";
+
+        console.error("MQTT INIT ERROR:", error);
+
+        reconnectTimer = setTimeout(startConnect, 5000);
+    }
 }
 
 /* ================= START ================= */
