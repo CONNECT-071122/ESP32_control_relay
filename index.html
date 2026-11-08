@@ -9,17 +9,19 @@
     body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; margin: 0; padding: 20px; }
     h2 { color: #333; }
     .status-box { background: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block; font-weight: bold; color: #dc3545; }
-    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; max-width: 750px; margin: 0 auto 20px auto; }
-    .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .btn { display: inline-block; padding: 8px 12px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; color: white; text-decoration: none; transition: 0.2s; width: 100%; box-sizing: border-box; margin-top: 5px; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; max-width: 850px; margin: 0 auto 20px auto; }
+    .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left; }
+    .card p.title { font-weight: bold; margin: 0 0 8px 0; color: #333; text-align: center; font-size: 16px; }
+    .btn { display: inline-block; padding: 8px 12px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; color: white; text-decoration: none; transition: 0.2s; width: 100%; box-sizing: border-box; text-align: center; }
     .btn-on { background-color: #28a745; }
     .btn-off { background-color: #dc3545; }
-    .btn-timer { background-color: #ffc107; color: #212529; }
+    .btn-timer { background-color: #17a2b8; margin-top: 5px; }
     .btn-ota { background-color: #007bff; max-width: 300px; padding: 12px; margin-top: 10px; }
     .btn:active { transform: scale(0.95); }
-    p { font-weight: bold; margin: 5px 0 10px 0; color: #555; }
-    .sub-status { font-size: 12px; color: #777; margin-top: 5px; }
-    input[type="number"] { width: 100%; padding: 6px; box-sizing: border-box; margin-top: 8px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+    .sub-status { font-size: 12px; color: #777; margin-top: 5px; text-align: center; }
+    .schedule-box { margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; font-size: 12px; color: #444; }
+    .schedule-box label { display: block; margin-top: 4px; }
+    .schedule-box input { width: 100%; padding: 4px; box-sizing: border-box; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -30,8 +32,8 @@
   
   <div class="grid-container" id="relay-grid"></div>
   
-  <div class="card" style="max-width: 330px; margin: 0 auto;">
-    <p>Cập nhật phần mềm hệ thống</p>
+  <div class="card" style="max-width: 330px; margin: 0 auto; text-align: center;">
+    <p class="title">Cập nhật phần mềm hệ thống</p>
     <button class="btn btn-ota" onclick="triggerOTA()">CẬP NHẬT OTA (ONLINE)</button>
     <div id="ota-status" class="sub-status" style="margin-top: 8px;">Trạng thái: Sẵn sàng</div>
   </div>
@@ -47,11 +49,18 @@
         let btnClass = isOn ? 'btn btn-off' : 'btn btn-on';
         let btnText = isOn ? 'TẮT (OFF)' : 'BẬT (ON)';
         let card = `<div class="card">
-                      <p>Relay ${i + 1}</p>
+                      <p class="title">Relay ${i + 1}</p>
                       <button class="${btnClass}" onclick="toggleRelay(${i})">${btnText}</button>
                       <div class="sub-status">Trạng thái: ${isOn ? 'Đang Bật' : 'Đang Tắt'}</div>
-                      <input type="number" id="timer-${i}" placeholder="Số phút bật" min="1" max="1440">
-                      <button class="btn btn-timer" onclick="setTimer(${i})">Hẹn giờ Bật</button>
+                      
+                      <div class="schedule-box">
+                        <label><input type="checkbox" id="en-${i}"> <b>Hẹn giờ trong ngày</b></label>
+                        <label>Bật lúc:</label>
+                        <input type="time" id="on-time-${i}" value="06:00">
+                        <label>Tắt lúc:</label>
+                        <input type="time" id="off-time-${i}" value="22:00">
+                        <button class="btn btn-timer" onclick="saveSchedule(${i})">Lưu Lịch</button>
+                      </div>
                     </div>`;
         grid.innerHTML += card;
       }
@@ -106,18 +115,37 @@
       client.send(message);
     }
 
-    function setTimer(id) {
-      let minutesInput = document.getElementById(`timer-${id}`).value;
-      let minutes = parseInt(minutesInput);
-      if (isNaN(minutes) || minutes <= 0) {
-        alert("Vui lòng nhập số phút hợp lệ!");
-        return;
+    function saveSchedule(id) {
+      let enabled = document.getElementById(`en-${id}`).checked;
+      let onTimeStr = document.getElementById(`on-time-${id}`).value;
+      let offTimeStr = document.getElementById(`off-time-${id}`).value;
+
+      let onH = -1, onM = -1, offH = -1, offM = -1;
+
+      if (onTimeStr) {
+        let parts = onTimeStr.split(":");
+        onH = parseInt(parts[0]);
+        onM = parseInt(parts[1]);
       }
-      let payload = JSON.stringify({ relay: id, state: 1, timer_minutes: minutes });
+      if (offTimeStr) {
+        let parts = offTimeStr.split(":");
+        offH = parseInt(parts[0]);
+        offM = parseInt(parts[1]);
+      }
+
+      let payload = JSON.stringify({
+        schedule_relay: id,
+        enable: enabled,
+        on_h: onH,
+        on_m: onM,
+        off_h: offH,
+        off_m: offM
+      });
+
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
       client.send(message);
-      alert(`Đã đặt hẹn giờ bật Relay ${id + 1} trong ${minutes} phút!`);
+      alert(`Đã cập nhật lịch hẹn giờ cho Relay ${id + 1}!`);
     }
 
     function triggerOTA() {
