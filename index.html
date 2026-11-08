@@ -24,7 +24,7 @@
   </style>
 </head>
 <body>
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 01</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY</h2>
   <div>
     <div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div>
   </div>
@@ -32,7 +32,6 @@
   <div class="grid-container" id="relay-grid"></div>
 
   <script>
-    // Mảng lưu trạng thái tại chỗ cho 8 relay
     let relayStates = [false, false, false, false, false, false, false, false];
 
     function buildGrid() {
@@ -145,26 +144,9 @@
       });
     }
 
-    // Hàm điều khiển đảo trạng thái trực tiếp mượt mà tuyệt đối
     function toggleRelay(id) {
-      // Đảo trạng thái ngay lập tức trên giao diện
-      relayStates[id] = !relayStates[id];
-      let newState = relayStates[id] ? 1 : 0;
-
-      // Cập nhật giao diện ngay lập tức
-      let btn = document.getElementById(`btn-${id}`);
-      let statusText = document.getElementById(`status-text-${id}`);
-      if (relayStates[id]) {
-        btn.className = "btn btn-off";
-        btn.innerText = "TẮT (OFF)";
-        statusText.innerText = "Trạng thái: Đang Bật";
-      } else {
-        btn.className = "btn btn-on";
-        btn.innerText = "BẬT (ON)";
-        statusText.innerText = "Trạng thái: Đang Tắt";
-      }
-
-      // Gửi lệnh qua MQTT lên ESP32
+      // Dựa vào trạng thái thực tế hiện tại để đảo chiều gửi lệnh (nếu đang bật thì gửi 0 để tắt, ngược lại)
+      let newState = relayStates[id] ? 0 : 1;
       let payload = JSON.stringify({ relay: id, state: newState });
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
