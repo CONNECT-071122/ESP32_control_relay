@@ -2,960 +2,924 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Điều khiển 8 Relay ESP32</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giám sát & Điều khiển 8 Relay</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/mqttws31.min.js"></script>
+  <!-- GIỮ NGUYÊN THƯ VIỆN MQTT GỐC -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
-<style>
-* {
-    box-sizing: border-box;
-}
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #f4f4f9;
+      margin: 0;
+      padding: 20px;
+    }
 
-body {
-    font-family: Arial, sans-serif;
-    background: #f1f3f6;
-    margin: 0;
-    padding: 15px;
-    color: #333;
-}
+    h2 { color: #333; }
 
-h2 {
-    text-align: center;
-    margin: 10px 0 20px;
-}
+    .status-box {
+      background: white;
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: inline-block;
+      font-weight: bold;
+      color: #dc3545;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 
-.mqtt-status {
-    max-width: 600px;
-    margin: 0 auto 15px;
-    padding: 12px;
-    background: white;
-    border-radius: 8px;
-    text-align: center;
-    font-weight: bold;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 15px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
 
-.status-online {
-    color: #28a745;
-}
+    .card {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      text-align: left;
+    }
 
-.status-offline {
-    color: #dc3545;
-}
+    .card p.title {
+      font-weight: bold;
+      margin: 0 0 10px 0;
+      color: #333;
+      text-align: center;
+      font-size: 17px;
+    }
 
-#relay-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 15px;
-    max-width: 1100px;
-    margin: auto;
-}
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      box-sizing: border-box;
+      margin-top: 6px;
+    }
 
-.relay-card {
-    background: white;
-    padding: 16px;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
-}
+    .btn-on { background: #28a745; }
+    .btn-off { background: #dc3545; }
+    .btn-timer { background: #17a2b8; margin-top: 10px; }
+    .btn-name { background: #6c757d; }
 
-.relay-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-}
+    .sub-status {
+      font-size: 12px;
+      color: #777;
+      margin-top: 6px;
+      text-align: center;
+    }
 
-.relay-title {
-    font-size: 17px;
-    font-weight: bold;
-}
+    .relay-name-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      margin: 5px 0;
+      font-size: 14px;
+    }
 
-.relay-state {
-    font-size: 13px;
-    font-weight: bold;
-}
+    .name-note {
+      font-size: 11px;
+      color: #28a745;
+      text-align: center;
+      margin: 4px 0;
+      min-height: 13px;
+    }
 
-.state-on {
-    color: #28a745;
-}
+    .schedule-box {
+      margin-top: 12px;
+      border-top: 1px solid #eee;
+      padding-top: 10px;
+      font-size: 12px;
+      color: #444;
+    }
 
-.state-off {
-    color: #dc3545;
-}
+    .schedule-box label {
+      display: block;
+      margin-top: 6px;
+      font-weight: bold;
+    }
 
-.relay-button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 6px;
-    color: white;
-    font-size: 15px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-bottom: 15px;
-}
+    .time-group {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      margin-top: 3px;
+    }
 
-.btn-on {
-    background: #28a745;
-}
+    .time-group input {
+      width: 50%;
+      padding: 7px;
+      box-sizing: border-box;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
 
-.btn-off {
-    background: #dc3545;
-}
+    .schedule-note {
+      font-size: 11px;
+      text-align: center;
+      min-height: 13px;
+      margin-top: 5px;
+    }
 
-.btn-disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-}
+    /* OTA */
+    .ota-box {
+      max-width: 600px;
+      margin: 0 auto 20px;
+      padding: 16px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
 
-.section-title {
-    font-size: 14px;
-    font-weight: bold;
-    margin: 12px 0 7px;
-}
+    .ota-title {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #333;
+    }
 
-.name-row {
-    display: flex;
-    gap: 6px;
-}
+    .btn-ota {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
 
-input[type="text"] {
-    min-width: 0;
-    flex: 1;
-    padding: 9px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
+    .btn-ota:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
 
-input[type="number"] {
-    width: 48px;
-    padding: 8px 4px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    text-align: center;
-}
+    .ota-status {
+      margin-top: 12px;
+      font-size: 13px;
+      font-weight: bold;
+      color: #666;
+    }
 
-button {
-    cursor: pointer;
-}
+    .ota-progress {
+      width: 100%;
+      height: 9px;
+      background: #e5e5e5;
+      border-radius: 10px;
+      margin-top: 10px;
+      overflow: hidden;
+    }
 
-.btn-save {
-    padding: 9px 12px;
-    border: none;
-    border-radius: 5px;
-    background: #007bff;
-    color: white;
-    font-weight: bold;
-}
+    .ota-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: #007bff;
+      transition: width 0.3s;
+    }
 
-.schedule-enable {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    margin: 12px 0;
-    font-size: 13px;
-}
-
-.time-row {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    margin: 8px 0;
-    font-size: 13px;
-}
-
-.time-label {
-    width: 55px;
-}
-
-.btn-schedule {
-    width: 100%;
-    padding: 10px;
-    background: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-weight: bold;
-    margin-top: 8px;
-}
-
-.btn-schedule.active {
-    background: #007bff;
-}
-
-.schedule-info {
-    font-size: 12px;
-    color: #777;
-    margin-top: 7px;
-}
-
-/* OTA */
-.ota-box {
-    max-width: 600px;
-    margin: 0 auto 20px;
-    padding: 16px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-}
-
-.ota-title {
-    font-size: 18px;
-    font-weight: bold;
-    margin-bottom: 12px;
-    color: #333;
-}
-
-.btn-ota {
-    width: 100%;
-    padding: 13px;
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 15px;
-    font-weight: bold;
-}
-
-.btn-ota:disabled {
-    background: #999;
-    cursor: not-allowed;
-}
-
-.ota-status {
-    margin-top: 12px;
-    font-size: 13px;
-    font-weight: bold;
-    color: #666;
-}
-
-.ota-progress {
-    width: 100%;
-    height: 9px;
-    background: #e5e5e5;
-    border-radius: 10px;
-    margin-top: 10px;
-    overflow: hidden;
-}
-
-.ota-progress-bar {
-    width: 0%;
-    height: 100%;
-    background: #007bff;
-    transition: width 0.3s;
-}
-
-.ota-note {
-    font-size: 11px;
-    color: #888;
-    margin-top: 8px;
-}
-</style>
+    .ota-note {
+      font-size: 11px;
+      color: #888;
+      margin-top: 8px;
+    }
+  </style>
 </head>
 
 <body>
 
-<h2>ĐIỀU KHIỂN 8 RELAY ESP32</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 02</h2>
 
-<div class="mqtt-status">
-    MQTT:
-    <span id="mqtt-status" class="status-offline">
-        Đang khởi tạo...
-    </span>
-</div>
+  <div>
+    <div class="status-box" id="mqtt-status">
+      Trạng thái MQTT: Đang kết nối...
+    </div>
+  </div>
 
-<!-- OTA -->
-<div class="ota-box">
+  <!-- OTA -->
+  <div class="ota-box">
     <div class="ota-title">CẬP NHẬT FIRMWARE ESP32</div>
 
-    <button
-        class="btn-ota"
-        id="btn-ota"
-        onclick="startOTA()">
-        CẬP NHẬT PHẦN MỀM
+    <button class="btn-ota" id="btn-ota" onclick="startOTA()">
+      CẬP NHẬT PHẦN MỀM
     </button>
 
     <div class="ota-status" id="ota-status">
-        Trạng thái: Sẵn sàng cập nhật
+      Trạng thái: Sẵn sàng cập nhật
     </div>
 
     <div class="ota-progress">
-        <div class="ota-progress-bar" id="ota-progress-bar"></div>
+      <div class="ota-progress-bar" id="ota-progress-bar"></div>
     </div>
 
     <div class="ota-note">
-        Không ngắt nguồn ESP32 trong quá trình cập nhật.
+      Không ngắt nguồn ESP32 trong quá trình cập nhật.
     </div>
-</div>
+  </div>
 
-<div id="relay-grid"></div>
+  <div class="grid-container" id="relay-grid"></div>
 
-<script>
+  <script>
 
-/* ================= MQTT CONFIG ================= */
+    // =================================
+    // CẤU HÌNH MQTT GỐC
+    // =================================
 
-const MQTT_HOST = "broker.hivemq.com";
-const MQTT_PORT = 8884;
-const MQTT_PATH = "/mqtt";
+    const CONTROL_TOPIC = "esp32/relay8/control";
+    const STATUS_TOPIC = "esp32/relay8/status";
 
-const CONTROL_TOPIC = "esp32/relay8/control";
-const STATUS_TOPIC = "esp32/relay8/status";
+    let clientId =
+      "web_relay_" + Math.random().toString(16).substring(2, 8);
 
-let client = null;
-let mqttIsConnected = false;
-let reconnectTimer = null;
+    let client = new Paho.MQTT.Client(
+      "broker.hivemq.com",
+      8884,
+      clientId
+    );
 
-let relayStates = Array(8).fill(false);
+    // =================================
+    // THEO DÕI DỮ LIỆU ĐANG CHỈNH SỬA
+    // =================================
 
-let relayNames = Array.from(
-    {length: 8},
-    (_, i) => "Relay " + (i + 1)
-);
+    let nameDirty = Array(8).fill(false);
+    let pendingNames = Array(8).fill("");
 
-let relaySchedules = Array.from(
-    {length: 8},
-    () => ({
-        en: false,
-        on_h: 8,
-        on_m: 0,
-        off_h: 18,
-        off_m: 0
-    })
-);
+    let scheduleDirty = Array(8).fill(false);
+    let pendingSchedules = Array(8).fill(null);
 
-let nameDirty = Array(8).fill(false);
-let scheduleDirty = Array(8).fill(false);
+    // =================================
+    // OTA STATE
+    // =================================
 
-/* ================= OTA STATE ================= */
+    let otaRequested = false;
+    let otaStarted = false;
+    let otaReconnectPending = false;
 
-let otaRequested = false;
-let otaStarted = false;
+    function setOTAStatus(message, color, progress) {
+      document.getElementById("ota-status").innerText = message;
+      document.getElementById("ota-status").style.color = color;
 
-function setOTAStatus(message, color, progress) {
-    const status = document.getElementById("ota-status");
-    const bar = document.getElementById("ota-progress-bar");
-    const button = document.getElementById("btn-ota");
+      if (progress !== null) {
+        document.getElementById("ota-progress-bar").style.width =
+          progress + "%";
+      }
 
-    status.innerText = message;
-    status.style.color = color;
-
-    if (progress !== null) {
-        bar.style.width = progress + "%";
+      document.getElementById("btn-ota").disabled = otaStarted;
     }
 
-    button.disabled = otaStarted;
-}
+    // =================================
+    // TẠO GIAO DIỆN 8 RELAY
+    // =================================
 
-/* ================= BUILD RELAY UI ================= */
+    function buildGrid() {
+      let grid = document.getElementById("relay-grid");
+      grid.innerHTML = "";
 
-function buildGrid() {
-    const grid = document.getElementById("relay-grid");
-    grid.innerHTML = "";
+      for (let i = 0; i < 8; i++) {
+        let card = `
+          <div class="card">
 
-    for (let i = 0; i < 8; i++) {
-        const card = document.createElement("div");
-        card.className = "relay-card";
-
-        card.innerHTML = `
-            <div class="relay-header">
-                <div class="relay-title" id="relay-title-${i}">
-                    Relay ${i + 1}
-                </div>
-
-                <div class="relay-state state-off" id="relay-state-${i}">
-                    OFF
-                </div>
-            </div>
+            <p class="title" id="title-${i}">
+              Relay ${i + 1}
+            </p>
 
             <button
-                class="relay-button btn-off"
-                id="relay-btn-${i}"
-                onclick="toggleRelay(${i})">
-                BẬT RELAY
+              class="btn btn-on"
+              id="btn-${i}"
+              onclick="toggleRelay(${i})">
+              BẬT (ON)
             </button>
 
-            <div class="section-title">Tên thiết bị</div>
-
-            <div class="name-row">
-                <input
-                    type="text"
-                    id="relay-name-${i}"
-                    value="Relay ${i + 1}"
-                    maxlength="30"
-                    onchange="relayNameEdited(${i})">
-
-                <button
-                    class="btn-save"
-                    onclick="saveRelayName(${i})">
-                    Lưu
-                </button>
+            <div class="sub-status" id="status-text-${i}">
+              Trạng thái: Đang Tắt
             </div>
 
-            <div class="section-title">Cài đặt lịch</div>
+            <input
+              class="relay-name-input"
+              type="text"
+              id="name-${i}"
+              maxlength="24"
+              value="Relay ${i + 1}"
+              placeholder="Nhập tên Relay"
+              oninput="relayNameEdited(${i})">
 
-            <label class="schedule-enable">
+            <button
+              class="btn btn-name"
+              onclick="saveRelayName(${i})">
+              Lưu tên
+            </button>
+
+            <div class="name-note" id="name-note-${i}"></div>
+
+            <div class="schedule-box">
+
+              <label>
                 <input
-                    type="checkbox"
-                    id="schedule-enable-${i}"
-                    onchange="scheduleEnableChanged(${i})">
+                  type="checkbox"
+                  id="en-${i}"
+                  onchange="scheduleEnableChanged(${i})">
                 Hẹn giờ trong ngày
-            </label>
+              </label>
 
-            <div class="time-row">
-                <span class="time-label">Giờ bật</span>
-                <input
-                    type="number"
-                    id="on-h-${i}"
-                    min="0"
-                    max="23"
-                    value="8"
-                    onchange="scheduleEdited(${i})">
-                :
-                <input
-                    type="number"
-                    id="on-m-${i}"
-                    min="0"
-                    max="59"
-                    value="0"
-                    onchange="scheduleEdited(${i})">
-            </div>
+              <label>Giờ Bật:</label>
 
-            <div class="time-row">
-                <span class="time-label">Giờ tắt</span>
+              <div class="time-group">
                 <input
-                    type="number"
-                    id="off-h-${i}"
-                    min="0"
-                    max="23"
-                    value="18"
-                    onchange="scheduleEdited(${i})">
-                :
-                <input
-                    type="number"
-                    id="off-m-${i}"
-                    min="0"
-                    max="59"
-                    value="0"
-                    onchange="scheduleEdited(${i})">
-            </div>
+                  type="number"
+                  id="on-h-${i}"
+                  min="0"
+                  max="23"
+                  value="6"
+                  oninput="scheduleEdited(${i})">
 
-            <button
-                class="btn-schedule"
-                id="schedule-btn-${i}"
+                <input
+                  type="number"
+                  id="on-m-${i}"
+                  min="0"
+                  max="59"
+                  value="0"
+                  oninput="scheduleEdited(${i})">
+              </div>
+
+              <label>Giờ Tắt:</label>
+
+              <div class="time-group">
+                <input
+                  type="number"
+                  id="off-h-${i}"
+                  min="0"
+                  max="23"
+                  value="22"
+                  oninput="scheduleEdited(${i})">
+
+                <input
+                  type="number"
+                  id="off-m-${i}"
+                  min="0"
+                  max="59"
+                  value="59"
+                  oninput="scheduleEdited(${i})">
+              </div>
+
+              <button
+                class="btn btn-timer"
                 onclick="saveSchedule(${i})">
-                LƯU LỊCH
-            </button>
+                Lưu Lịch
+              </button>
 
-            <div class="schedule-info" id="schedule-info-${i}">
-                Chưa bật hẹn giờ
+              <div class="schedule-note" id="schedule-note-${i}"></div>
+
             </div>
+          </div>
         `;
 
-        grid.appendChild(card);
+        grid.innerHTML += card;
+      }
     }
-}
 
-/* ================= MQTT FUNCTIONS ================= */
+    // =================================
+    // KIỂM TRA MQTT - GIỮ NGUYÊN
+    // =================================
 
-function mqttConnected() {
-    return client && mqttIsConnected;
-}
-
-function sendMQTT(data) {
-    if (!mqttConnected()) {
-        alert("Chưa kết nối MQTT!");
+    function mqttConnected() {
+      if (!client || !client.isConnected()) {
+        alert("MQTT chưa kết nối!");
         return false;
+      }
+      return true;
     }
 
-    try {
-        const message = new Paho.MQTT.Message(
-            JSON.stringify(data)
-        );
+    // =================================
+    // GỬI MQTT - GIỮ NGUYÊN
+    // =================================
 
-        message.destinationName = CONTROL_TOPIC;
-        client.send(message);
+    function sendMQTT(data) {
+      if (!mqttConnected()) return false;
 
-        return true;
+      let message = new Paho.MQTT.Message(
+        JSON.stringify(data)
+      );
 
-    } catch (error) {
-        console.error("MQTT SEND ERROR:", error);
-        return false;
-    }
-}
+      message.destinationName = CONTROL_TOPIC;
+      client.send(message);
 
-/* ================= RELAY CONTROL ================= */
-
-function toggleRelay(id) {
-    if (relaySchedules[id].en) {
-        alert("Relay đang bật chế độ hẹn giờ. Hãy tắt hẹn giờ trước khi điều khiển thủ công.");
-        return;
+      return true;
     }
 
-    const newState = !relayStates[id];
+    // =================================
+    // ĐIỀU KHIỂN RELAY
+    // =================================
 
-    sendMQTT({
+    function toggleRelay(id) {
+      let btn = document.getElementById(`btn-${id}`);
+
+      let targetState =
+        btn.innerText.includes("TẮT") ? 0 : 1;
+
+      sendMQTT({
         relay: id,
-        state: newState ? 1 : 0
-    });
-}
-
-/* ================= RENAME RELAY ================= */
-
-function relayNameEdited(id) {
-    nameDirty[id] = true;
-}
-
-function saveRelayName(id) {
-    const name = document
-        .getElementById("relay-name-" + id)
-        .value.trim();
-
-    if (!name) {
-        alert("Tên relay không được để trống!");
-        return;
+        state: targetState
+      });
     }
 
-    if (sendMQTT({
+    // =================================
+    // ĐỔI TÊN RELAY
+    // =================================
+
+    function relayNameEdited(id) {
+      nameDirty[id] = true;
+
+      let note =
+        document.getElementById(`name-note-${id}`);
+
+      note.innerText = "Chưa lưu thay đổi";
+      note.style.color = "#dc3545";
+    }
+
+    function saveRelayName(id) {
+      let input = document.getElementById(`name-${id}`);
+
+      let newName = input.value.trim();
+
+      if (newName.length === 0) {
+        newName = `Relay ${id + 1}`;
+      }
+
+      newName = newName.substring(0, 24);
+      input.value = newName;
+
+      if (!mqttConnected()) return;
+
+      pendingNames[id] = newName;
+      nameDirty[id] = true;
+
+      let note =
+        document.getElementById(`name-note-${id}`);
+
+      note.innerText = "Đang lưu...";
+      note.style.color = "#17a2b8";
+
+      sendMQTT({
         rename_relay: id,
-        name: name
-    })) {
-        nameDirty[id] = false;
-    }
-}
-
-/* ================= SCHEDULE ================= */
-
-function scheduleEdited(id) {
-    scheduleDirty[id] = true;
-}
-
-function scheduleEnableChanged(id) {
-    scheduleDirty[id] = true;
-}
-
-function getScheduleValues(id) {
-    const values = {
-        en: document.getElementById("schedule-enable-" + id).checked,
-        on_h: Number(document.getElementById("on-h-" + id).value),
-        on_m: Number(document.getElementById("on-m-" + id).value),
-        off_h: Number(document.getElementById("off-h-" + id).value),
-        off_m: Number(document.getElementById("off-m-" + id).value)
-    };
-
-    if (
-        values.on_h < 0 || values.on_h > 23 ||
-        values.off_h < 0 || values.off_h > 23 ||
-        values.on_m < 0 || values.on_m > 59 ||
-        values.off_m < 0 || values.off_m > 59
-    ) {
-        return null;
+        name: newName
+      });
     }
 
-    return values;
-}
+    // =================================
+    // HẸN GIỜ RELAY
+    // =================================
 
-function sameSchedule(a, b) {
-    return (
-        a.en === b.en &&
-        a.on_h === b.on_h &&
-        a.on_m === b.on_m &&
-        a.off_h === b.off_h &&
-        a.off_m === b.off_m
-    );
-}
+    function scheduleEdited(id) {
+      scheduleDirty[id] = true;
 
-function saveSchedule(id) {
-    const values = getScheduleValues(id);
+      let note =
+        document.getElementById(`schedule-note-${id}`);
 
-    if (!values) {
+      note.innerText = "Chưa lưu thay đổi";
+      note.style.color = "#dc3545";
+    }
+
+    function getScheduleValues(id) {
+      return {
+        en: document.getElementById(`en-${id}`).checked,
+
+        on_h: Number(
+          document.getElementById(`on-h-${id}`).value
+        ),
+
+        on_m: Number(
+          document.getElementById(`on-m-${id}`).value
+        ),
+
+        off_h: Number(
+          document.getElementById(`off-h-${id}`).value
+        ),
+
+        off_m: Number(
+          document.getElementById(`off-m-${id}`).value
+        )
+      };
+    }
+
+    // =================================
+    // TÍCH / BỎ TÍCH HẸN GIỜ NGAY LẬP TỨC
+    // =================================
+
+    function scheduleEnableChanged(id) {
+
+      if (!mqttConnected()) {
+        return;
+      }
+
+      let sch = getScheduleValues(id);
+
+      pendingSchedules[id] = {...sch};
+      scheduleDirty[id] = true;
+
+      let note =
+        document.getElementById(`schedule-note-${id}`);
+
+      note.innerText = sch.en
+        ? "Đang bật chế độ hẹn giờ..."
+        : "Đang tắt chế độ hẹn giờ...";
+
+      note.style.color = "#17a2b8";
+
+      sendMQTT({
+        schedule_relay: id,
+        enable: sch.en,
+        on_h: sch.on_h,
+        on_m: sch.on_m,
+        off_h: sch.off_h,
+        off_m: sch.off_m
+      });
+    }
+
+    // =================================
+    // LƯU LỊCH
+    // =================================
+
+    function saveSchedule(id) {
+      let sch = getScheduleValues(id);
+
+      if (
+        !Number.isInteger(sch.on_h) ||
+        sch.on_h < 0 || sch.on_h > 23 ||
+        !Number.isInteger(sch.off_h) ||
+        sch.off_h < 0 || sch.off_h > 23 ||
+        !Number.isInteger(sch.on_m) ||
+        sch.on_m < 0 || sch.on_m > 59 ||
+        !Number.isInteger(sch.off_m) ||
+        sch.off_m < 0 || sch.off_m > 59
+      ) {
         alert("Giờ hoặc phút không hợp lệ!");
         return;
-    }
+      }
 
-    if (
-        values.en &&
-        values.on_h === values.off_h &&
-        values.on_m === values.off_m
-    ) {
-        alert("Giờ bật và giờ tắt không được trùng nhau!");
-        return;
-    }
+      if (!mqttConnected()) return;
 
-    if (sendMQTT({
+      pendingSchedules[id] = {...sch};
+      scheduleDirty[id] = true;
+
+      let note =
+        document.getElementById(`schedule-note-${id}`);
+
+      note.innerText = "Đang lưu...";
+      note.style.color = "#17a2b8";
+
+      sendMQTT({
         schedule_relay: id,
-        enable: values.en,
-        on_h: values.on_h,
-        on_m: values.on_m,
-        off_h: values.off_h,
-        off_m: values.off_m
-    })) {
-        scheduleDirty[id] = false;
+        enable: sch.en,
+        on_h: sch.on_h,
+        on_m: sch.on_m,
+        off_h: sch.off_h,
+        off_m: sch.off_m
+      });
     }
-}
 
-/* ================= UPDATE WEB UI ================= */
+    // =================================
+    // SO SÁNH LỊCH ESP32 PHẢN HỒI
+    // =================================
 
-function updateUI(data) {
+    function sameSchedule(a, b) {
+      if (!a || !b) return false;
 
-    /* OTA STATUS */
+      return (
+        Boolean(a.en) === Boolean(b.en) &&
+        Number(a.on_h) === Number(b.on_h) &&
+        Number(a.on_m) === Number(b.on_m) &&
+        Number(a.off_h) === Number(b.off_h) &&
+        Number(a.off_m) === Number(b.off_m)
+      );
+    }
 
-    if (data.ota !== undefined) {
+    // =================================
+    // CẬP NHẬT GIAO DIỆN TỪ ESP32
+    // =================================
+
+    function updateUI(data) {
+
+      // OTA STATUS
+      if (data.ota !== undefined) {
 
         if (data.ota === "downloading") {
-            otaRequested = true;
-            otaStarted = true;
+          otaRequested = true;
+          otaStarted = true;
+          otaReconnectPending = false;
 
-            setOTAStatus(
-                "ESP32 đang tải firmware từ GitHub...",
-                "#17a2b8",
-                50
-            );
+          setOTAStatus(
+            "ESP32 đang tải firmware từ GitHub...",
+            "#17a2b8",
+            50
+          );
 
         } else if (data.ota === "failed") {
-            otaRequested = false;
-            otaStarted = false;
+          otaRequested = false;
+          otaStarted = false;
+          otaReconnectPending = false;
 
-            setOTAStatus(
-                "CẬP NHẬT THẤT BẠI! Kiểm tra Wi-Fi hoặc file firmware.",
-                "#dc3545",
-                0
-            );
+          setOTAStatus(
+            "CẬP NHẬT THẤT BẠI! Kiểm tra Wi-Fi hoặc file firmware.",
+            "#dc3545",
+            0
+          );
 
         } else if (data.ota === "wifi_error") {
-            otaRequested = false;
-            otaStarted = false;
+          otaRequested = false;
+          otaStarted = false;
 
-            setOTAStatus(
-                "ESP32 không có kết nối Wi-Fi!",
-                "#dc3545",
-                0
-            );
+          setOTAStatus(
+            "ESP32 không có kết nối Wi-Fi!",
+            "#dc3545",
+            0
+          );
 
         } else if (data.ota === "no_update") {
-            otaRequested = false;
-            otaStarted = false;
+          otaRequested = false;
+          otaStarted = false;
 
-            setOTAStatus(
-                "Không có bản cập nhật mới.",
-                "#666",
-                0
-            );
+          setOTAStatus(
+            "Không có bản cập nhật mới.",
+            "#666",
+            0
+          );
 
         } else if (data.ota === "busy") {
-            otaRequested = false;
-            otaStarted = false;
+          otaRequested = false;
+          otaStarted = false;
 
-            setOTAStatus(
-                "ESP32 đang thực hiện một tác vụ cập nhật khác.",
-                "#dc3545",
-                0
-            );
+          setOTAStatus(
+            "ESP32 đang thực hiện một tác vụ cập nhật khác.",
+            "#dc3545",
+            0
+          );
 
         } else if (
-            data.ota === "idle" &&
-            otaRequested &&
-            otaStarted
+          data.ota === "idle" &&
+          otaReconnectPending
         ) {
-            otaRequested = false;
-            otaStarted = false;
+          otaRequested = false;
+          otaStarted = false;
+          otaReconnectPending = false;
 
-            setOTAStatus(
-                "ESP32 đã kết nối lại sau cập nhật. Có thể cập nhật đã thành công.",
-                "#28a745",
-                100
-            );
+          setOTAStatus(
+            "ESP32 đã kết nối lại sau cập nhật.",
+            "#28a745",
+            100
+          );
         }
+      }
+
+      // CẬP NHẬT TRẠNG THÁI RELAY
+      if (data.relays) {
+        for (let i = 0; i < 8; i++) {
+          let isOn =
+            data.relays[i] === 1 ||
+            data.relays[i] === true;
+
+          let btn = document.getElementById(`btn-${i}`);
+          let statusText =
+            document.getElementById(`status-text-${i}`);
+
+          if (!btn || !statusText) continue;
+
+          if (isOn) {
+            btn.className = "btn btn-off";
+            btn.innerText = "TẮT (OFF)";
+            statusText.innerText = "Trạng thái: Đang Bật";
+          } else {
+            btn.className = "btn btn-on";
+            btn.innerText = "BẬT (ON)";
+            statusText.innerText = "Trạng thái: Đang Tắt";
+          }
+        }
+      }
+
+      // CẬP NHẬT TÊN RELAY
+      if (data.names) {
+        for (let i = 0; i < 8; i++) {
+          let receivedName = data.names[i];
+          if (!receivedName) continue;
+
+          let input = document.getElementById(`name-${i}`);
+          let title = document.getElementById(`title-${i}`);
+          let note = document.getElementById(`name-note-${i}`);
+
+          if (!nameDirty[i]) {
+            input.value = receivedName;
+            title.innerText = receivedName;
+
+          } else if (receivedName === pendingNames[i]) {
+            nameDirty[i] = false;
+            pendingNames[i] = "";
+
+            input.value = receivedName;
+            title.innerText = receivedName;
+
+            note.innerText = "Đã lưu tên";
+            note.style.color = "#28a745";
+          }
+        }
+      }
+
+      // CẬP NHẬT LỊCH
+      if (data.schedules) {
+        for (let i = 0; i < 8; i++) {
+          let sch = data.schedules[i];
+          if (!sch) continue;
+
+          let chkBox = document.getElementById(`en-${i}`);
+          let onH = document.getElementById(`on-h-${i}`);
+          let onM = document.getElementById(`on-m-${i}`);
+          let offH = document.getElementById(`off-h-${i}`);
+          let offM = document.getElementById(`off-m-${i}`);
+          let note = document.getElementById(`schedule-note-${i}`);
+
+          if (!scheduleDirty[i]) {
+            chkBox.checked = Boolean(sch.en);
+            onH.value = sch.on_h;
+            onM.value = sch.on_m;
+            offH.value = sch.off_h;
+            offM.value = sch.off_m;
+
+          } else if (
+            sameSchedule(sch, pendingSchedules[i])
+          ) {
+            scheduleDirty[i] = false;
+            pendingSchedules[i] = null;
+
+            chkBox.checked = Boolean(sch.en);
+            onH.value = sch.on_h;
+            onM.value = sch.on_m;
+            offH.value = sch.off_h;
+            offM.value = sch.off_m;
+
+            note.innerText = "Đã lưu lịch";
+            note.style.color = "#28a745";
+          }
+        }
+      }
     }
 
-    /* RELAY STATES */
+    // =================================
+    // OTA COMMAND
+    // =================================
 
-    if (Array.isArray(data.relays)) {
-        data.relays.forEach((state, i) => {
-            if (i >= 8) return;
-
-            relayStates[i] = Boolean(state);
-
-            const stateEl =
-                document.getElementById("relay-state-" + i);
-
-            const btn =
-                document.getElementById("relay-btn-" + i);
-
-            if (relayStates[i]) {
-                stateEl.innerText = "ON";
-                stateEl.className = "relay-state state-on";
-
-                btn.innerText = "TẮT RELAY";
-                btn.className = "relay-button btn-on";
-            } else {
-                stateEl.innerText = "OFF";
-                stateEl.className = "relay-state state-off";
-
-                btn.innerText = "BẬT RELAY";
-                btn.className = "relay-button btn-off";
-            }
-
-            btn.disabled = Boolean(
-                data.schedules &&
-                data.schedules[i] &&
-                data.schedules[i].en
-            );
-
-            if (btn.disabled) {
-                btn.classList.add("btn-disabled");
-            }
-        });
-    }
-
-    /* RELAY NAMES */
-
-    if (Array.isArray(data.names)) {
-        data.names.forEach((name, i) => {
-            if (i >= 8) return;
-
-            relayNames[i] = name;
-
-            if (!nameDirty[i]) {
-                document.getElementById("relay-name-" + i).value = name;
-            }
-
-            document.getElementById("relay-title-" + i).innerText = name;
-        });
-    }
-
-    /* SCHEDULES */
-
-    if (Array.isArray(data.schedules)) {
-        data.schedules.forEach((schedule, i) => {
-            if (i >= 8) return;
-
-            relaySchedules[i] = {
-                en: Boolean(schedule.en),
-                on_h: Number(schedule.on_h),
-                on_m: Number(schedule.on_m),
-                off_h: Number(schedule.off_h),
-                off_m: Number(schedule.off_m)
-            };
-
-            if (!scheduleDirty[i]) {
-                document.getElementById("schedule-enable-" + i).checked =
-                    relaySchedules[i].en;
-
-                document.getElementById("on-h-" + i).value =
-                    relaySchedules[i].on_h;
-
-                document.getElementById("on-m-" + i).value =
-                    relaySchedules[i].on_m;
-
-                document.getElementById("off-h-" + i).value =
-                    relaySchedules[i].off_h;
-
-                document.getElementById("off-m-" + i).value =
-                    relaySchedules[i].off_m;
-            }
-
-            const info =
-                document.getElementById("schedule-info-" + i);
-
-            const btn =
-                document.getElementById("schedule-btn-" + i);
-
-            if (relaySchedules[i].en) {
-                info.innerText =
-                    "Đang hẹn giờ: " +
-                    String(relaySchedules[i].on_h).padStart(2, "0") + ":" +
-                    String(relaySchedules[i].on_m).padStart(2, "0") +
-                    " → " +
-                    String(relaySchedules[i].off_h).padStart(2, "0") + ":" +
-                    String(relaySchedules[i].off_m).padStart(2, "0");
-
-                btn.classList.add("active");
-            } else {
-                info.innerText = "Chưa bật hẹn giờ";
-                btn.classList.remove("active");
-            }
-        });
-    }
-}
-
-/* ================= OTA COMMAND ================= */
-
-function startOTA() {
-    if (!mqttConnected()) {
-        alert("Chưa kết nối MQTT!");
+    function startOTA() {
+      if (!mqttConnected()) {
+        alert("MQTT chưa kết nối!");
         return;
-    }
+      }
 
-    if (otaStarted) {
+      if (otaStarted) {
         alert("ESP32 đang cập nhật firmware!");
         return;
-    }
+      }
 
-    const confirmUpdate = confirm(
+      const confirmUpdate = confirm(
         "Bạn có chắc chắn muốn cập nhật firmware ESP32?\n\n" +
         "ESP32 sẽ tải firmware mới từ GitHub và tự khởi động lại.\n\n" +
         "Không ngắt nguồn trong quá trình cập nhật."
-    );
+      );
 
-    if (!confirmUpdate) return;
+      if (!confirmUpdate) return;
 
-    try {
-        const message = new Paho.MQTT.Message("UPDATE");
+      try {
+        // Gửi lệnh dạng TEXT, không phải JSON
+        let message = new Paho.MQTT.Message("UPDATE");
         message.destinationName = CONTROL_TOPIC;
 
         client.send(message);
 
         otaRequested = true;
         otaStarted = true;
+        otaReconnectPending = false;
 
         setOTAStatus(
-            "Đã gửi lệnh. Đang chờ ESP32 phản hồi...",
-            "#17a2b8",
-            0
+          "Đã gửi lệnh. Đang chờ ESP32 phản hồi...",
+          "#17a2b8",
+          0
         );
 
-    } catch (error) {
+      } catch (error) {
         otaRequested = false;
         otaStarted = false;
 
         setOTAStatus(
-            "Không gửi được lệnh cập nhật!",
-            "#dc3545",
-            0
+          "Không gửi được lệnh cập nhật!",
+          "#dc3545",
+          0
         );
 
         console.error("OTA SEND ERROR:", error);
-    }
-}
-
-/* ================= MQTT MESSAGE ================= */
-
-function onMessageArrived(message) {
-    try {
-        const data = JSON.parse(message.payloadString);
-        updateUI(data);
-
-    } catch (error) {
-        console.error("JSON ERROR:", error);
-        console.log("MQTT MESSAGE:", message.payloadString);
-    }
-}
-
-/* ================= MQTT CONNECTION ================= */
-
-function startConnect() {
-    const status = document.getElementById("mqtt-status");
-
-    if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = null;
+      }
     }
 
-    status.innerText = "Đang khởi tạo MQTT...";
-    status.className = "status-offline";
+    // =================================
+    // MQTT NHẬN DỮ LIỆU
+    // =================================
 
-    if (typeof Paho === "undefined" || !Paho.MQTT) {
-        status.innerText = "LỖI: Không tải được thư viện MQTT";
-        console.error("Paho MQTT library is not loaded!");
+    client.onMessageArrived = function(message) {
+      if (message.destinationName === STATUS_TOPIC) {
+        try {
+          let data = JSON.parse(message.payloadString);
+          updateUI(data);
+        } catch (e) {
+          console.log("JSON ERROR:", e);
+        }
+      }
+    };
 
-        reconnectTimer = setTimeout(startConnect, 5000);
-        return;
-    }
+    // =================================
+    // MQTT MẤT KẾT NỐI
+    // =================================
 
-    const clientId = "ESP32_WEB_" +
-        Math.random().toString(16).substring(2, 10);
+    client.onConnectionLost = function(responseObject) {
+      let st = document.getElementById("mqtt-status");
 
-    try {
-        client = new Paho.MQTT.Client(
-            MQTT_HOST,
-            MQTT_PORT,
-            MQTT_PATH,
-            clientId
+      st.innerText = "Trạng thái MQTT: Mất kết nối!";
+      st.style.color = "red";
+
+      console.log(
+        "MQTT connection lost:",
+        responseObject.errorMessage
+      );
+
+      if (otaStarted) {
+        otaReconnectPending = true;
+
+        setOTAStatus(
+          "ESP32 đang cập nhật hoặc khởi động lại...",
+          "#17a2b8",
+          75
         );
+      }
 
-        client.onConnectionLost = function(response) {
-            mqttIsConnected = false;
+      setTimeout(startConnect, 5000);
+    };
 
-            status.innerText = "Mất kết nối MQTT";
-            status.className = "status-offline";
+    // =================================
+    // KẾT NỐI MQTT - GIỮ NGUYÊN CÁCH GỐC
+    // =================================
 
-            console.error("MQTT CONNECTION LOST:", response);
+    function startConnect() {
+      if (client.isConnected()) return;
 
-            if (otaStarted) {
-                setOTAStatus(
-                    "ESP32 đang cập nhật hoặc khởi động lại...",
-                    "#17a2b8",
-                    75
-                );
-            }
+      client.connect({
+        useSSL: true,
 
-            reconnectTimer = setTimeout(startConnect, 5000);
-        };
+        onSuccess: function() {
+          let st = document.getElementById("mqtt-status");
 
-        client.onMessageArrived = onMessageArrived;
+          st.innerText =
+            "Trạng thái MQTT: Đã kết nối thành công!";
 
-        status.innerText = "Đang kết nối HiveMQ...";
+          st.style.color = "#28a745";
 
-        console.log("Đang kết nối HiveMQ...");
+          client.subscribe(STATUS_TOPIC);
 
-        client.connect({
-            useSSL: true,
-            timeout: 15,
-            keepAliveInterval: 30,
+        },
 
-            onSuccess: function() {
-                mqttIsConnected = true;
+        onFailure: function(error) {
+          let st = document.getElementById("mqtt-status");
 
-                status.innerText = "ĐÃ KẾT NỐI MQTT";
-                status.className = "status-online";
+          st.innerText =
+            "Trạng thái MQTT: Kết nối thất bại!";
 
-                console.log("MQTT CONNECTED SUCCESSFULLY");
+          st.style.color = "red";
 
-                client.subscribe(STATUS_TOPIC, {
-                    onSuccess: function() {
-                        console.log("Đã đăng ký topic:", STATUS_TOPIC);
-                    },
+          console.log("MQTT error:", error);
 
-                    onFailure: function(error) {
-                        console.error("SUBSCRIBE ERROR:", error);
-                    }
-                });
-            },
-
-            onFailure: function(error) {
-                mqttIsConnected = false;
-
-                status.innerText = "MQTT LỖI: " +
-                    (error.errorMessage || "Không xác định");
-
-                status.className = "status-offline";
-
-                console.error("MQTT CONNECT FAILED:", error);
-
-                reconnectTimer = setTimeout(startConnect, 5000);
-            }
-        });
-
-    } catch (error) {
-        mqttIsConnected = false;
-
-        status.innerText = "LỖI KHỞI TẠO MQTT";
-        status.className = "status-offline";
-
-        console.error("MQTT INIT ERROR:", error);
-
-        reconnectTimer = setTimeout(startConnect, 5000);
+          setTimeout(startConnect, 5000);
+        }
+      });
     }
-}
 
-/* ================= START ================= */
+    // =================================
+    // KHỞI ĐỘNG
+    // =================================
 
-buildGrid();
-startConnect();
+    buildGrid();
+    startConnect();
 
-</script>
+  </script>
 
 </body>
 </html>
