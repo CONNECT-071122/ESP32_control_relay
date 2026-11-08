@@ -74,7 +74,6 @@
     }
 
     function updateUI(data) {
-      // 1. Cập nhật trạng thái bật/tắt relay
       if (data.relays) {
         relayStates = data.relays;
         for (let i = 0; i < 8; i++) {
@@ -96,7 +95,6 @@
         }
       }
 
-      // 2. Cập nhật đồng bộ lịch hẹn giờ từ ESP32 xuống các thiết bị (Điện thoại/Máy tính)
       if (data.schedules) {
         for (let i = 0; i < 8; i++) {
           let sch = data.schedules[i];
@@ -106,7 +104,6 @@
           let offHInput = document.getElementById(`off-h-${i}`);
           let offMInput = document.getElementById(`off-m-${i}`);
 
-          // Chỉ cập nhật nếu người dùng không đang nhập trực tiếp trên ô đó để tránh bị giật con trỏ
           if (chkBox && document.activeElement !== chkBox) chkBox.checked = sch.en;
           if (onHInput && document.activeElement !== onHInput) onHInput.value = sch.on_h;
           if (onMInput && document.activeElement !== onMInput) onMInput.value = sch.on_m;
@@ -167,7 +164,7 @@
       let onH = parseInt(document.getElementById(`on-h-${id}`).value) || 0;
       let onM = parseInt(document.getElementById(`on-m-${id}`).value) || 0;
       let offH = parseInt(document.getElementById(`off-h-${id}`).value) || 0;
-      let offM = parseInt(document.getElementById(`off-m-${id}`.value)) || 0;
+      let offM = parseInt(document.getElementById(`off-m-${id}`).value) || 0;
 
       let payload = JSON.stringify({
         schedule_relay: id,
