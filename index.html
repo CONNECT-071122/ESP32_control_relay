@@ -26,7 +26,7 @@
   </style>
 </head>
 <body>
-  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY</h2>
+  <h2>GIÁM SÁT & ĐIỀU KHIỂN 8 RELAY 01</h2>
   <div>
     <div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div>
   </div>
@@ -63,7 +63,7 @@
                         <label>Giờ Tắt (0-23 : 0-59):</label>
                         <div class="time-group">
                           <input type="number" id="off-h-${i}" min="0" max="23" value="22" placeholder="Giờ">
-                          <input type="number" id="off-m-${i}" min="0" max="59" value="0" placeholder="Phút">
+                          <input type="number" id="off-m-${i}" min="0" max="59" value="59" placeholder="Phút">
                         </div>
 
                         <button class="btn btn-timer" onclick="saveSchedule(${i})">Lưu Lịch</button>
@@ -73,7 +73,6 @@
       }
     }
 
-    // Cập nhật UI hoàn toàn dựa trên trạng thái thực tế từ ESP32 gửi về
     function updateUI(data) {
       if (data.relays) {
         relayStates = data.relays;
@@ -158,7 +157,7 @@
       let payload = JSON.stringify({ relay: id, state: newState });
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
-      client.send(message); // Chỉ gửi lệnh lên, giao diện sẽ chờ phản hồi thực tế từ ESP32 rồi mới đổi màu
+      client.send(message);
     }
 
     function saveSchedule(id) {
