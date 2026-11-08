@@ -9,19 +9,20 @@
     body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f9; margin: 0; padding: 20px; }
     h2 { color: #333; }
     .status-box { background: white; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block; font-weight: bold; color: #dc3545; }
-    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; max-width: 850px; margin: 0 auto 20px auto; }
+    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; max-width: 900px; margin: 0 auto 20px auto; }
     .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left; }
     .card p.title { font-weight: bold; margin: 0 0 8px 0; color: #333; text-align: center; font-size: 16px; }
     .btn { display: inline-block; padding: 8px 12px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; color: white; text-decoration: none; transition: 0.2s; width: 100%; box-sizing: border-box; text-align: center; }
     .btn-on { background-color: #28a745; }
     .btn-off { background-color: #dc3545; }
-    .btn-timer { background-color: #17a2b8; margin-top: 5px; }
+    .btn-timer { background-color: #17a2b8; margin-top: 8px; }
     .btn-ota { background-color: #007bff; max-width: 300px; padding: 12px; margin-top: 10px; }
     .btn:active { transform: scale(0.95); }
     .sub-status { font-size: 12px; color: #777; margin-top: 5px; text-align: center; }
     .schedule-box { margin-top: 10px; border-top: 1px solid #eee; padding-top: 8px; font-size: 12px; color: #444; }
-    .schedule-box label { display: block; margin-top: 4px; }
-    .schedule-box input[type="text"] { width: 100%; padding: 5px; box-sizing: border-box; margin-top: 2px; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    .schedule-box label { display: block; margin-top: 4px; font-weight: bold; }
+    .time-group { display: flex; gap: 5px; align-items: center; margin-top: 2px; }
+    .time-group input { width: 48%; padding: 6px; box-sizing: border-box; text-align: center; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
   </style>
 </head>
 <body>
@@ -52,10 +53,19 @@
                       
                       <div class="schedule-box">
                         <label><input type="checkbox" id="en-${i}"> <b>Hẹn giờ trong ngày</b></label>
-                        <label>Bật lúc (HH:MM - 24h):</label>
-                        <input type="text" id="on-time-${i}" value="06:00" placeholder="VD: 16:52">
-                        <label>Tắt lúc (HH:MM - 24h):</label>
-                        <input type="text" id="off-time-${i}" value="22:00" placeholder="VD: 22:00">
+                        
+                        <label>Giờ Bật (0-23 : 0-59):</label>
+                        <div class="time-group">
+                          <input type="number" id="on-h-${i}" min="0" max="23" value="6" placeholder="Giờ">
+                          <input type="number" id="on-m-${i}" min="0" max="59" value="0" placeholder="Phút">
+                        </div>
+
+                        <label>Giờ Tắt (0-23 : 0-59):</label>
+                        <div class="time-group">
+                          <input type="number" id="off-h-${i}" min="0" max="23" value="22" placeholder="Giờ">
+                          <input type="number" id="off-m-${i}" min="0" max="59" value="0" placeholder="Phút">
+                        </div>
+
                         <button class="btn btn-timer" onclick="saveSchedule(${i})">Lưu Lịch</button>
                       </div>
                     </div>`;
@@ -63,22 +73,45 @@
       }
     }
 
-    function updateRelaysUI() {
-      for (let i = 0; i < 8; i++) {
-        let isOn = relayStates[i];
-        let btn = document.getElementById(`btn-${i}`);
-        let statusText = document.getElementById(`status-text-${i}`);
-        
-        if (btn && statusText) {
-          if (isOn) {
-            btn.className = "btn btn-off";
-            btn.innerText = "TẮT (OFF)";
-            statusText.innerText = "Trạng thái: Đang Bật";
-          } else {
-            btn.className = "btn btn-on";
-            btn.innerText = "BẬT (ON)";
-            statusText.innerText = "Trạng thái: Đang Tắt";
+    function updateUI(data) {
+      // 1. Cập nhật trạng thái bật/tắt relay
+      if (data.relays) {
+        relayStates = data.relays;
+        for (let i = 0; i < 8; i++) {
+          let isOn = relayStates[i];
+          let btn = document.getElementById(`btn-${i}`);
+          let statusText = document.getElementById(`status-text-${i}`);
+          
+          if (btn && statusText) {
+            if (isOn) {
+              btn.className = "btn btn-off";
+              btn.innerText = "TẮT (OFF)";
+              statusText.innerText = "Trạng thái: Đang Bật";
+            } else {
+              btn.className = "btn btn-on";
+              btn.innerText = "BẬT (ON)";
+              statusText.innerText = "Trạng thái: Đang Tắt";
+            }
           }
+        }
+      }
+
+      // 2. Cập nhật đồng bộ lịch hẹn giờ từ ESP32 xuống các thiết bị (Điện thoại/Máy tính)
+      if (data.schedules) {
+        for (let i = 0; i < 8; i++) {
+          let sch = data.schedules[i];
+          let chkBox = document.getElementById(`en-${i}`);
+          let onHInput = document.getElementById(`on-h-${i}`);
+          let onMInput = document.getElementById(`on-m-${i}`);
+          let offHInput = document.getElementById(`off-h-${i}`);
+          let offMInput = document.getElementById(`off-m-${i}`);
+
+          // Chỉ cập nhật nếu người dùng không đang nhập trực tiếp trên ô đó để tránh bị giật con trỏ
+          if (chkBox && document.activeElement !== chkBox) chkBox.checked = sch.en;
+          if (onHInput && document.activeElement !== onHInput) onHInput.value = sch.on_h;
+          if (onMInput && document.activeElement !== onMInput) onMInput.value = sch.on_m;
+          if (offHInput && document.activeElement !== offHInput) offHInput.value = sch.off_h;
+          if (offMInput && document.activeElement !== offMInput) offMInput.value = sch.off_m;
         }
       }
     }
@@ -98,10 +131,7 @@
       if (message.destinationName === "esp32/relay8/status") {
         try {
           let data = JSON.parse(message.payloadString);
-          if (data.relays) {
-            relayStates = data.relays;
-            updateRelaysUI();
-          }
+          updateUI(data);
         } catch(e) {}
       }
     };
@@ -134,21 +164,10 @@
 
     function saveSchedule(id) {
       let enabled = document.getElementById(`en-${id}`).checked;
-      let onTimeStr = document.getElementById(`on-time-${id}`).value.trim();
-      let offTimeStr = document.getElementById(`off-time-${id}`).value.trim();
-
-      let onH = -1, onM = -1, offH = -1, offM = -1;
-
-      if (onTimeStr.includes(":")) {
-        let parts = onTimeStr.split(":");
-        onH = parseInt(parts[0]);
-        onM = parseInt(parts[1]);
-      }
-      if (offTimeStr.includes(":")) {
-        let parts = offTimeStr.split(":");
-        offH = parseInt(parts[0]);
-        offM = parseInt(parts[1]);
-      }
+      let onH = parseInt(document.getElementById(`on-h-${id}`).value) || 0;
+      let onM = parseInt(document.getElementById(`on-m-${id}`).value) || 0;
+      let offH = parseInt(document.getElementById(`off-h-${id}`).value) || 0;
+      let offM = parseInt(document.getElementById(`off-m-${id}`.value)) || 0;
 
       let payload = JSON.stringify({
         schedule_relay: id,
@@ -162,7 +181,7 @@
       let message = new Paho.MQTT.Message(payload);
       message.destinationName = "esp32/relay8/control";
       client.send(message);
-      alert(`Đã lưu lịch Relay ${id + 1}: Bật lúc ${onH}:${onM} - Tắt lúc ${offH}:${offM}`);
+      alert(`Đã lưu lịch Relay ${id + 1}!`);
     }
 
     function triggerOTA() {
