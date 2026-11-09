@@ -2,720 +2,430 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Giám sát & Điều khiển 8 Relay</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background: #f4f4f9;
-      margin: 0;
-      padding: 20px;
-    }
-    h2 { color: #333; }
-    .status-box {
-      background: white;
-      padding: 10px 15px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-      display: inline-block;
-      font-weight: bold;
-      color: #dc3545;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .grid-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 15px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-    .card {
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      text-align: left;
-    }
-    .card p.title {
-      font-weight: bold;
-      margin: 0 0 10px 0;
-      color: #333;
-      text-align: center;
-      font-size: 17px;
-    }
-    .btn {
-      display: block;
-      width: 100%;
-      padding: 9px 12px;
-      font-size: 14px;
-      font-weight: bold;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      color: white;
-      box-sizing: border-box;
-      margin-top: 6px;
-    }
-    .btn-on { background: #28a745; }
-    .btn-off { background: #dc3545; }
-    .btn-timer { background: #17a2b8; margin-top: 10px; }
-    .btn-name { background: #6c757d; }
-    .sub-status {
-      font-size: 12px;
-      color: #777;
-      margin-top: 6px;
-      text-align: center;
-    }
-    .relay-name-input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      margin: 5px 0;
-      font-size: 14px;
-    }
-    .name-note {
-      font-size: 11px;
-      color: #28a745;
-      text-align: center;
-      margin: 4px 0;
-      min-height: 13px;
-    }
-    .schedule-box {
-      margin-top: 12px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-      font-size: 12px;
-      color: #444;
-    }
-    .schedule-box label {
-      display: block;
-      margin-top: 6px;
-      font-weight: bold;
-    }
-    .time-group {
-      display: flex;
-      gap: 5px;
-      align-items: center;
-      margin-top: 3px;
-    }
-    .time-group input {
-      width: 50%;
-      padding: 7px;
-      box-sizing: border-box;
-      text-align: center;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    .schedule-note {
-      font-size: 11px;
-      text-align: center;
-      min-height: 13px;
-      margin-top: 5px;
-    }
-
-    /* NÚT BẬT TẮT TẤT CẢ */
-    .all-relay-controls {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      max-width: 500px;
-      margin: 0 auto 20px;
-    }
-    .btn-all {
-      flex: 1;
-      padding: 13px 10px;
-      border: none;
-      border-radius: 6px;
-      color: white;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .btn-all-on { background: #28a745; }
-    .btn-all-off { background: #dc3545; }
-    .btn-all:active { opacity: 0.75; }
-
-    /* OTA */
-    .ota-box {
-      max-width: 600px;
-      margin: 0 auto 20px;
-      padding: 16px;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-    .ota-title {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 12px;
-      color: #333;
-    }
-    .btn-ota {
-      display: block;
-      width: 100%;
-      padding: 13px;
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .btn-ota:disabled {
-      background: #999;
-      cursor: not-allowed;
-    }
-    .ota-status {
-      margin-top: 12px;
-      font-size: 13px;
-      font-weight: bold;
-      color: #666;
-    }
-    .ota-progress {
-      width: 100%;
-      height: 9px;
-      background: #e5e5e5;
-      border-radius: 10px;
-      margin-top: 10px;
-      overflow: hidden;
-    }
-    .ota-progress-bar {
-      width: 0%;
-      height: 100%;
-      background: #007bff;
-      transition: width 0.3s;
-    }
-    .ota-note {
-      font-size: 11px;
-      color: #888;
-      margin-top: 8px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Giám sát & Điều khiển 8 Relay</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<style>
+body{font-family:Arial,sans-serif;text-align:center;background:#f4f4f9;margin:0;padding:20px}
+h2{color:#333}
+.status-box{background:white;padding:10px 15px;border-radius:8px;margin-bottom:20px;display:inline-block;font-weight:bold;color:#dc3545;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.grid-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;max-width:1000px;margin:0 auto}
+.card{background:white;padding:15px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,.1);text-align:left}
+.card p.title{font-weight:bold;margin:0 0 10px;color:#333;text-align:center;font-size:17px}
+.btn{display:block;width:100%;padding:9px 12px;font-size:14px;font-weight:bold;cursor:pointer;border:none;border-radius:5px;color:white;box-sizing:border-box;margin-top:6px}
+.btn-on{background:#28a745}.btn-off{background:#dc3545}.btn-timer{background:#17a2b8;margin-top:10px}.btn-name{background:#6c757d}
+.sub-status{font-size:12px;color:#777;margin-top:6px;text-align:center}
+.relay-name-input{width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:5px;margin:5px 0;font-size:14px}
+.name-note{font-size:11px;color:#28a745;text-align:center;margin:4px 0;min-height:13px}
+.schedule-box{margin-top:12px;border-top:1px solid #eee;padding-top:10px;font-size:12px;color:#444}
+.schedule-box label{display:block;margin-top:6px;font-weight:bold}
+.time-group{display:flex;gap:5px;align-items:center;margin-top:3px}
+.time-group input{width:50%;padding:7px;box-sizing:border-box;text-align:center;border:1px solid #ccc;border-radius:4px;font-size:14px}
+.schedule-note{font-size:11px;text-align:center;min-height:13px;margin-top:5px}
+.all-relay-controls{display:flex;justify-content:center;gap:12px;max-width:500px;margin:0 auto 20px}
+.btn-all{flex:1;padding:13px 10px;border:none;border-radius:6px;color:white;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-all-on{background:#28a745}.btn-all-off{background:#dc3545}.btn-all:active{opacity:.75}
+.ota-box,.volume-box{max-width:600px;margin:0 auto 20px;padding:16px;background:white;border-radius:10px;box-shadow:0 3px 8px rgba(0,0,0,.1);box-sizing:border-box}
+.ota-title,.volume-title{font-size:18px;font-weight:bold;margin-bottom:12px;color:#333}
+.btn-ota{display:block;width:100%;padding:13px;background:#007bff;color:white;border:none;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer}
+.btn-ota:disabled{background:#999;cursor:not-allowed}
+.ota-status{margin-top:12px;font-size:13px;font-weight:bold;color:#666}
+.ota-progress{width:100%;height:9px;background:#e5e5e5;border-radius:10px;margin-top:10px;overflow:hidden}
+.ota-progress-bar{width:0%;height:100%;background:#007bff;transition:width .3s}
+.ota-note{font-size:11px;color:#888;margin-top:8px}
+.volume-row{display:flex;align-items:center;gap:12px}
+.volume-icon{font-size:25px}
+.volume-slider{flex:1;width:100%;accent-color:#007bff;cursor:pointer}
+.volume-value{min-width:48px;font-size:18px;font-weight:bold;color:#007bff}
+.volume-note{font-size:11px;color:#888;margin-top:8px}
+</style>
 </head>
 <body>
-
-  <h2>ĐIỀU KHIỂN VÀ GIÁM SÁT</h2>
-
-  <div>
-    <div class="status-box" id="mqtt-status">
-      Trạng thái MQTT: Đang kết nối...
-    </div>
-  </div>
-
-  <!-- OTA -->
-  <div class="ota-box">
-    <div class="ota-title">CẬP NHẬT FIRMWARE ESP32</div>
-    <button class="btn-ota" id="btn-ota" onclick="startOTA()">
-      CẬP NHẬT PHẦN MỀM
-    </button>
-    <div class="ota-status" id="ota-status">
-      Trạng thái: Sẵn sàng cập nhật
-    </div>
-    <div class="ota-progress">
-      <div class="ota-progress-bar" id="ota-progress-bar"></div>
-    </div>
-    <div class="ota-note">
-      Không ngắt nguồn ESP32 trong quá trình cập nhật.
-    </div>
-  </div>
-
-  <!-- HAI NÚT ĐIỀU KHIỂN TẤT CẢ -->
-  <div class="all-relay-controls">
-    <button class="btn-all btn-all-on" onclick="controlAllRelays(1)">
-      BẬT TẤT CẢ
-    </button>
-    <button class="btn-all btn-all-off" onclick="controlAllRelays(0)">
-      TẮT TẤT CẢ
-    </button>
-  </div>
-
-  <div class="grid-container" id="relay-grid"></div>
-
-  <script>
-    // CẤU HÌNH MQTT
-    const CONTROL_TOPIC = "esp32/relay8/control";
-    const STATUS_TOPIC = "esp32/relay8/status";
-
-    let clientId = "web_relay_" + Math.random().toString(16).substring(2, 8);
-
-    let client = new Paho.MQTT.Client(
-      "broker.hivemq.com",
-      8884,
-      clientId
-    );
-
-    // THEO DÕI DỮ LIỆU ĐANG CHỈNH SỬA
-    let nameDirty = Array(8).fill(false);
-    let pendingNames = Array(8).fill("");
-    let scheduleDirty = Array(8).fill(false);
-    let pendingSchedules = Array(8).fill(null);
-
-    // OTA STATE
-    let otaRequested = false;
-    let otaStarted = false;
-    let otaReconnectPending = false;
-
-    function setOTAStatus(message, color, progress) {
-      document.getElementById("ota-status").innerText = message;
-      document.getElementById("ota-status").style.color = color;
-
-      if (progress !== null) {
-        document.getElementById("ota-progress-bar").style.width = progress + "%";
-      }
-
-      document.getElementById("btn-ota").disabled = otaStarted;
-    }
-
-    // TẠO GIAO DIỆN 8 RELAY
-    function buildGrid() {
-      let grid = document.getElementById("relay-grid");
-      grid.innerHTML = "";
-
-      for (let i = 0; i < 8; i++) {
-        let card = `
-          <div class="card">
-            <p class="title" id="title-${i}">Relay ${i + 1}</p>
-
-            <button class="btn btn-on" id="btn-${i}" onclick="toggleRelay(${i})">
-              BẬT (ON)
-            </button>
-
-            <div class="sub-status" id="status-text-${i}">
-              Trạng thái: Đang Tắt
-            </div>
-
-            <input class="relay-name-input" type="text" id="name-${i}"
-              maxlength="24" value="Relay ${i + 1}"
-              placeholder="Nhập tên Relay" oninput="relayNameEdited(${i})">
-
-            <button class="btn btn-name" onclick="saveRelayName(${i})">
-              Lưu tên
-            </button>
-
-            <div class="name-note" id="name-note-${i}"></div>
-
-            <div class="schedule-box">
-              <label>
-                <input type="checkbox" id="en-${i}"
-                  onchange="scheduleEnableChanged(${i})">
-                Hẹn giờ trong ngày
-              </label>
-
-              <label>Giờ Bật:</label>
-              <div class="time-group">
-                <input type="number" id="on-h-${i}" min="0" max="23"
-                  value="6" oninput="scheduleEdited(${i})">
-                <input type="number" id="on-m-${i}" min="0" max="59"
-                  value="0" oninput="scheduleEdited(${i})">
-              </div>
-
-              <label>Giờ Tắt:</label>
-              <div class="time-group">
-                <input type="number" id="off-h-${i}" min="0" max="23"
-                  value="22" oninput="scheduleEdited(${i})">
-                <input type="number" id="off-m-${i}" min="0" max="59"
-                  value="59" oninput="scheduleEdited(${i})">
-              </div>
-
-              <button class="btn btn-timer" onclick="saveSchedule(${i})">
-                Lưu Lịch
-              </button>
-
-              <div class="schedule-note" id="schedule-note-${i}"></div>
-            </div>
-          </div>
-        `;
-        grid.innerHTML += card;
-      }
-    }
-
-    // KIỂM TRA MQTT
-    function mqttConnected() {
-      if (!client || !client.isConnected()) {
-        alert("MQTT chưa kết nối!");
-        return false;
-      }
-      return true;
-    }
-
-    // GỬI MQTT
-    function sendMQTT(data) {
-      if (!mqttConnected()) return false;
-
-      let message = new Paho.MQTT.Message(JSON.stringify(data));
-      message.destinationName = CONTROL_TOPIC;
-      client.send(message);
-      return true;
-    }
-
-    // ĐIỀU KHIỂN MỘT RELAY
-    function toggleRelay(id) {
-      let btn = document.getElementById(`btn-${id}`);
-      let targetState = btn.innerText.includes("TẮT") ? 0 : 1;
-
-      sendMQTT({
-        relay: id,
-        state: targetState
-      });
-    }
-
-    // ĐIỀU KHIỂN TẤT CẢ 8 RELAY
-    function controlAllRelays(state) {
-      if (!mqttConnected()) return;
-
-      let action = state === 1 ? "BẬT" : "TẮT";
-      if (!confirm(`Bạn có chắc chắn muốn ${action} TẤT CẢ 8 RELAY?`)) return;
-
-      try {
-        for (let i = 0; i < 8; i++) {
-          let message = new Paho.MQTT.Message(JSON.stringify({
-            relay: i,
-            state: state
-          }));
-          message.destinationName = CONTROL_TOPIC;
-          client.send(message);
-        }
-      } catch (error) {
-        console.error("CONTROL ALL ERROR:", error);
-        alert("Có lỗi khi gửi lệnh điều khiển tất cả relay!");
-      }
-    }
-
-    // ĐỔI TÊN RELAY
-    function relayNameEdited(id) {
-      nameDirty[id] = true;
-      let note = document.getElementById(`name-note-${id}`);
-      note.innerText = "Chưa lưu thay đổi";
-      note.style.color = "#dc3545";
-    }
-
-    function saveRelayName(id) {
-      let input = document.getElementById(`name-${id}`);
-      let newName = input.value.trim();
-
-      if (newName.length === 0) newName = `Relay ${id + 1}`;
-      newName = newName.substring(0, 24);
-      input.value = newName;
-
-      if (!mqttConnected()) return;
-
-      pendingNames[id] = newName;
-      nameDirty[id] = true;
-
-      let note = document.getElementById(`name-note-${id}`);
-      note.innerText = "Đang lưu...";
-      note.style.color = "#17a2b8";
-
-      sendMQTT({
-        rename_relay: id,
-        name: newName
-      });
-    }
-
-    // HẸN GIỜ RELAY
-    function scheduleEdited(id) {
-      scheduleDirty[id] = true;
-      let note = document.getElementById(`schedule-note-${id}`);
-      note.innerText = "Chưa lưu thay đổi";
-      note.style.color = "#dc3545";
-    }
-
-    function getScheduleValues(id) {
-      return {
-        en: document.getElementById(`en-${id}`).checked,
-        on_h: Number(document.getElementById(`on-h-${id}`).value),
-        on_m: Number(document.getElementById(`on-m-${id}`).value),
-        off_h: Number(document.getElementById(`off-h-${id}`).value),
-        off_m: Number(document.getElementById(`off-m-${id}`).value)
-      };
-    }
-
-    // TÍCH / BỎ TÍCH HẸN GIỜ NGAY LẬP TỨC
-    function scheduleEnableChanged(id) {
-      if (!mqttConnected()) return;
-
-      let sch = getScheduleValues(id);
-      pendingSchedules[id] = {...sch};
-      scheduleDirty[id] = true;
-
-      let note = document.getElementById(`schedule-note-${id}`);
-      note.innerText = sch.en
-        ? "Đang bật chế độ hẹn giờ..."
-        : "Đang tắt chế độ hẹn giờ...";
-      note.style.color = "#17a2b8";
-
-      sendMQTT({
-        schedule_relay: id,
-        enable: sch.en,
-        on_h: sch.on_h,
-        on_m: sch.on_m,
-        off_h: sch.off_h,
-        off_m: sch.off_m
-      });
-    }
-
-    // LƯU LỊCH
-    function saveSchedule(id) {
-      let sch = getScheduleValues(id);
-
-      if (
-        !Number.isInteger(sch.on_h) || sch.on_h < 0 || sch.on_h > 23 ||
-        !Number.isInteger(sch.off_h) || sch.off_h < 0 || sch.off_h > 23 ||
-        !Number.isInteger(sch.on_m) || sch.on_m < 0 || sch.on_m > 59 ||
-        !Number.isInteger(sch.off_m) || sch.off_m < 0 || sch.off_m > 59
-      ) {
-        alert("Giờ hoặc phút không hợp lệ!");
-        return;
-      }
-
-      if (!mqttConnected()) return;
-
-      pendingSchedules[id] = {...sch};
-      scheduleDirty[id] = true;
-
-      let note = document.getElementById(`schedule-note-${id}`);
-      note.innerText = "Đang lưu...";
-      note.style.color = "#17a2b8";
-
-      sendMQTT({
-        schedule_relay: id,
-        enable: sch.en,
-        on_h: sch.on_h,
-        on_m: sch.on_m,
-        off_h: sch.off_h,
-        off_m: sch.off_m
-      });
-    }
-
-    // SO SÁNH LỊCH ESP32 PHẢN HỒI
-    function sameSchedule(a, b) {
-      if (!a || !b) return false;
-
-      return (
-        Boolean(a.en) === Boolean(b.en) &&
-        Number(a.on_h) === Number(b.on_h) &&
-        Number(a.on_m) === Number(b.on_m) &&
-        Number(a.off_h) === Number(b.off_h) &&
-        Number(a.off_m) === Number(b.off_m)
-      );
-    }
-
-    // CẬP NHẬT GIAO DIỆN TỪ ESP32
-    function updateUI(data) {
-      // OTA STATUS
-      if (data.ota !== undefined) {
-        if (data.ota === "downloading") {
-          otaRequested = true;
-          otaStarted = true;
-          otaReconnectPending = false;
-          setOTAStatus("ESP32 đang tải firmware từ GitHub...", "#17a2b8", 50);
-
-        } else if (data.ota === "failed") {
-          otaRequested = false;
-          otaStarted = false;
-          otaReconnectPending = false;
-          setOTAStatus("CẬP NHẬT THẤT BẠI! Kiểm tra Wi-Fi hoặc file firmware.", "#dc3545", 0);
-
-        } else if (data.ota === "wifi_error") {
-          otaRequested = false;
-          otaStarted = false;
-          setOTAStatus("ESP32 không có kết nối Wi-Fi!", "#dc3545", 0);
-
-        } else if (data.ota === "no_update") {
-          otaRequested = false;
-          otaStarted = false;
-          setOTAStatus("Không có bản cập nhật mới.", "#666", 0);
-
-        } else if (data.ota === "busy") {
-          otaRequested = false;
-          otaStarted = false;
-          setOTAStatus("ESP32 đang thực hiện một tác vụ cập nhật khác.", "#dc3545", 0);
-
-        } else if (data.ota === "idle" && otaReconnectPending) {
-          otaRequested = false;
-          otaStarted = false;
-          otaReconnectPending = false;
-          setOTAStatus("ESP32 đã kết nối lại sau cập nhật.", "#28a745", 100);
-        }
-      }
-
-      // CẬP NHẬT TRẠNG THÁI RELAY
-      if (data.relays) {
-        for (let i = 0; i < 8; i++) {
-          let isOn = data.relays[i] === 1 || data.relays[i] === true;
-          let btn = document.getElementById(`btn-${i}`);
-          let statusText = document.getElementById(`status-text-${i}`);
-
-          if (!btn || !statusText) continue;
-
-          if (isOn) {
-            btn.className = "btn btn-off";
-            btn.innerText = "TẮT (OFF)";
-            statusText.innerText = "Trạng thái: Đang Bật";
-          } else {
-            btn.className = "btn btn-on";
-            btn.innerText = "BẬT (ON)";
-            statusText.innerText = "Trạng thái: Đang Tắt";
-          }
-        }
-      }
-
-      // CẬP NHẬT TÊN RELAY
-      if (data.names) {
-        for (let i = 0; i < 8; i++) {
-          let receivedName = data.names[i];
-          if (!receivedName) continue;
-
-          let input = document.getElementById(`name-${i}`);
-          let title = document.getElementById(`title-${i}`);
-          let note = document.getElementById(`name-note-${i}`);
-
-          if (!nameDirty[i]) {
-            input.value = receivedName;
-            title.innerText = receivedName;
-          } else if (receivedName === pendingNames[i]) {
-            nameDirty[i] = false;
-            pendingNames[i] = "";
-            input.value = receivedName;
-            title.innerText = receivedName;
-            note.innerText = "Đã lưu tên";
-            note.style.color = "#28a745";
-          }
-        }
-      }
-
-      // CẬP NHẬT LỊCH
-      if (data.schedules) {
-        for (let i = 0; i < 8; i++) {
-          let sch = data.schedules[i];
-          if (!sch) continue;
-
-          let chkBox = document.getElementById(`en-${i}`);
-          let onH = document.getElementById(`on-h-${i}`);
-          let onM = document.getElementById(`on-m-${i}`);
-          let offH = document.getElementById(`off-h-${i}`);
-          let offM = document.getElementById(`off-m-${i}`);
-          let note = document.getElementById(`schedule-note-${i}`);
-
-          if (!scheduleDirty[i]) {
-            chkBox.checked = Boolean(sch.en);
-            onH.value = sch.on_h;
-            onM.value = sch.on_m;
-            offH.value = sch.off_h;
-            offM.value = sch.off_m;
-          } else if (sameSchedule(sch, pendingSchedules[i])) {
-            scheduleDirty[i] = false;
-            pendingSchedules[i] = null;
-            chkBox.checked = Boolean(sch.en);
-            onH.value = sch.on_h;
-            onM.value = sch.on_m;
-            offH.value = sch.off_h;
-            offM.value = sch.off_m;
-            note.innerText = "Đã lưu lịch";
-            note.style.color = "#28a745";
-          }
-        }
-      }
-    }
-
-    // OTA COMMAND
-    function startOTA() {
-      if (!mqttConnected()) {
-        alert("MQTT chưa kết nối!");
-        return;
-      }
-
-      if (otaStarted) {
-        alert("ESP32 đang cập nhật firmware!");
-        return;
-      }
-
-      const confirmUpdate = confirm(
-        "Bạn có chắc chắn muốn cập nhật firmware ESP32?\n\n" +
-        "ESP32 sẽ tải firmware mới từ GitHub và tự khởi động lại.\n\n" +
-        "Không ngắt nguồn trong quá trình cập nhật."
-      );
-
-      if (!confirmUpdate) return;
-
-      try {
-        let message = new Paho.MQTT.Message("UPDATE");
-        message.destinationName = CONTROL_TOPIC;
-        client.send(message);
-
-        otaRequested = true;
-        otaStarted = true;
-        otaReconnectPending = false;
-
-        setOTAStatus("Đã gửi lệnh. Đang chờ ESP32 phản hồi...", "#17a2b8", 0);
-      } catch (error) {
-        otaRequested = false;
-        otaStarted = false;
-        setOTAStatus("Không gửi được lệnh cập nhật!", "#dc3545", 0);
-        console.error("OTA SEND ERROR:", error);
-      }
-    }
-
-    // MQTT NHẬN DỮ LIỆU
-    client.onMessageArrived = function(message) {
-      if (message.destinationName === STATUS_TOPIC) {
-        try {
-          let data = JSON.parse(message.payloadString);
-          updateUI(data);
-        } catch (e) {
-          console.log("JSON ERROR:", e);
-        }
-      }
-    };
-
-    // MQTT MẤT KẾT NỐI
-    client.onConnectionLost = function(responseObject) {
-      let st = document.getElementById("mqtt-status");
-      st.innerText = "Trạng thái MQTT: Mất kết nối!";
-      st.style.color = "red";
-
-      console.log("MQTT connection lost:", responseObject.errorMessage);
-
-      if (otaStarted) {
-        otaReconnectPending = true;
-        setOTAStatus("ESP32 đang cập nhật hoặc khởi động lại...", "#17a2b8", 75);
-      }
-
-      setTimeout(startConnect, 5000);
-    };
-
-    // KẾT NỐI MQTT
-    function startConnect() {
-      if (client.isConnected()) return;
-
-      client.connect({
-        useSSL: true,
-        onSuccess: function() {
-          let st = document.getElementById("mqtt-status");
-          st.innerText = "Trạng thái MQTT: Đã kết nối thành công!";
-          st.style.color = "#28a745";
-          client.subscribe(STATUS_TOPIC);
-        },
-        onFailure: function(error) {
-          let st = document.getElementById("mqtt-status");
-          st.innerText = "Trạng thái MQTT: Kết nối thất bại!";
-          st.style.color = "red";
-          console.log("MQTT error:", error);
-          setTimeout(startConnect, 5000);
-        }
-      });
-    }
-
-    // KHỞI ĐỘNG
-    buildGrid();
-    startConnect();
-  </script>
+<h2>ĐIỀU KHIỂN VÀ GIÁM SÁT</h2>
+<div><div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div></div>
+
+<!-- OTA -->
+<div class="ota-box">
+<div class="ota-title">CẬP NHẬT FIRMWARE ESP32</div>
+<button class="btn-ota" id="btn-ota" onclick="startOTA()">CẬP NHẬT PHẦN MỀM</button>
+<div class="ota-status" id="ota-status">Trạng thái: Sẵn sàng cập nhật</div>
+<div class="ota-progress"><div class="ota-progress-bar" id="ota-progress-bar"></div></div>
+<div class="ota-note">Không ngắt nguồn ESP32 trong quá trình cập nhật.</div>
+</div>
+
+<!-- ÂM LƯỢNG LOA -->
+<div class="volume-box">
+<div class="volume-title">ĐIỀU CHỈNH ÂM LƯỢNG LOA</div>
+<div class="volume-row">
+<span class="volume-icon">🔈</span>
+<input type="range" class="volume-slider" id="volume-slider" min="0" max="100" value="35" oninput="volumeChanged(this.value)" onchange="sendVolume()">
+<span class="volume-icon">🔊</span>
+<span class="volume-value" id="volume-value">35%</span>
+</div>
+<div class="volume-note" id="volume-note">Âm lượng sẽ được lưu trên ESP32.</div>
+</div>
+
+<!-- BẬT TẮT TẤT CẢ -->
+<div class="all-relay-controls">
+<button class="btn-all btn-all-on" onclick="controlAllRelays(1)">BẬT TẤT CẢ</button>
+<button class="btn-all btn-all-off" onclick="controlAllRelays(0)">TẮT TẤT CẢ</button>
+</div>
+
+<div class="grid-container" id="relay-grid"></div>
+
+<script>
+const CONTROL_TOPIC="esp32/relay8/control";
+const STATUS_TOPIC="esp32/relay8/status";
+let clientId="web_relay_"+Math.random().toString(16).substring(2,8);
+let client=new Paho.MQTT.Client("broker.hivemq.com",8884,clientId);
+
+let nameDirty=Array(8).fill(false);
+let pendingNames=Array(8).fill("");
+let scheduleDirty=Array(8).fill(false);
+let pendingSchedules=Array(8).fill(null);
+
+let otaRequested=false;
+let otaStarted=false;
+let otaReconnectPending=false;
+let volumeDirty=false;
+
+function setOTAStatus(message,color,progress){
+document.getElementById("ota-status").innerText=message;
+document.getElementById("ota-status").style.color=color;
+if(progress!==null)document.getElementById("ota-progress-bar").style.width=progress+"%";
+document.getElementById("btn-ota").disabled=otaStarted;
+}
+
+// TẠO GIAO DIỆN RELAY
+function buildGrid(){
+let grid=document.getElementById("relay-grid");
+grid.innerHTML="";
+for(let i=0;i<8;i++){
+let card=`
+<div class="card">
+<p class="title" id="title-${i}">Relay ${i+1}</p>
+<button class="btn btn-on" id="btn-${i}" onclick="toggleRelay(${i})">BẬT (ON)</button>
+<div class="sub-status" id="status-text-${i}">Trạng thái: Đang Tắt</div>
+<input class="relay-name-input" type="text" id="name-${i}" maxlength="24" value="Relay ${i+1}" placeholder="Nhập tên Relay" oninput="relayNameEdited(${i})">
+<button class="btn btn-name" onclick="saveRelayName(${i})">Lưu tên</button>
+<div class="name-note" id="name-note-${i}"></div>
+<div class="schedule-box">
+<label><input type="checkbox" id="en-${i}" onchange="scheduleEnableChanged(${i})"> Hẹn giờ trong ngày</label>
+<label>Giờ Bật:</label>
+<div class="time-group">
+<input type="number" id="on-h-${i}" min="0" max="23" value="6" oninput="scheduleEdited(${i})">
+<input type="number" id="on-m-${i}" min="0" max="59" value="0" oninput="scheduleEdited(${i})">
+</div>
+<label>Giờ Tắt:</label>
+<div class="time-group">
+<input type="number" id="off-h-${i}" min="0" max="23" value="22" oninput="scheduleEdited(${i})">
+<input type="number" id="off-m-${i}" min="0" max="59" value="59" oninput="scheduleEdited(${i})">
+</div>
+<button class="btn btn-timer" onclick="saveSchedule(${i})">Lưu Lịch</button>
+<div class="schedule-note" id="schedule-note-${i}"></div>
+</div>
+</div>`;
+grid.innerHTML+=card;
+}
+}
+
+function mqttConnected(){
+if(!client||!client.isConnected()){
+alert("MQTT chưa kết nối!");
+return false;
+}
+return true;
+}
+
+function sendMQTT(data){
+if(!mqttConnected())return false;
+let message=new Paho.MQTT.Message(JSON.stringify(data));
+message.destinationName=CONTROL_TOPIC;
+client.send(message);
+return true;
+}
+
+// ÂM LƯỢNG LOA
+function volumeChanged(value){
+document.getElementById("volume-value").innerText=value+"%";
+document.getElementById("volume-note").innerText="Đang chọn âm lượng "+value+"%";
+}
+
+function sendVolume(){
+let value=Number(document.getElementById("volume-slider").value);
+if(!mqttConnected())return;
+if(sendMQTT({volume:value})){
+volumeDirty=true;
+document.getElementById("volume-note").innerText="Đã gửi mức âm lượng "+value+"%";
+}
+}
+
+// ĐIỀU KHIỂN RIÊNG
+function toggleRelay(id){
+let btn=document.getElementById(`btn-${id}`);
+let targetState=btn.innerText.includes("TẮT")?0:1;
+sendMQTT({relay:id,state:targetState});
+}
+
+// ĐIỀU KHIỂN TẤT CẢ
+function controlAllRelays(state){
+if(!mqttConnected())return;
+let action=state===1?"BẬT":"TẮT";
+if(!confirm(`Bạn có chắc chắn muốn ${action} TẤT CẢ 8 RELAY?`))return;
+sendMQTT({all_relays:true,state:state});
+}
+
+// ĐỔI TÊN
+function relayNameEdited(id){
+nameDirty[id]=true;
+let note=document.getElementById(`name-note-${id}`);
+note.innerText="Chưa lưu thay đổi";
+note.style.color="#dc3545";
+}
+
+function saveRelayName(id){
+let input=document.getElementById(`name-${id}`);
+let newName=input.value.trim();
+if(newName.length===0)newName=`Relay ${id+1}`;
+newName=newName.substring(0,24);
+input.value=newName;
+if(!mqttConnected())return;
+pendingNames[id]=newName;
+nameDirty[id]=true;
+let note=document.getElementById(`name-note-${id}`);
+note.innerText="Đang lưu...";
+note.style.color="#17a2b8";
+sendMQTT({rename_relay:id,name:newName});
+}
+
+// HẸN GIỜ
+function scheduleEdited(id){
+scheduleDirty[id]=true;
+let note=document.getElementById(`schedule-note-${id}`);
+note.innerText="Chưa lưu thay đổi";
+note.style.color="#dc3545";
+}
+
+function getScheduleValues(id){
+return{
+en:document.getElementById(`en-${id}`).checked,
+on_h:Number(document.getElementById(`on-h-${id}`).value),
+on_m:Number(document.getElementById(`on-m-${id}`).value),
+off_h:Number(document.getElementById(`off-h-${id}`).value),
+off_m:Number(document.getElementById(`off-m-${id}`).value)
+};
+}
+
+function scheduleEnableChanged(id){
+if(!mqttConnected())return;
+let sch=getScheduleValues(id);
+pendingSchedules[id]={...sch};
+scheduleDirty[id]=true;
+let note=document.getElementById(`schedule-note-${id}`);
+note.innerText=sch.en?"Đang bật chế độ hẹn giờ...":"Đang tắt chế độ hẹn giờ...";
+note.style.color="#17a2b8";
+sendMQTT({schedule_relay:id,enable:sch.en,on_h:sch.on_h,on_m:sch.on_m,off_h:sch.off_h,off_m:sch.off_m});
+}
+
+function saveSchedule(id){
+let sch=getScheduleValues(id);
+if(!Number.isInteger(sch.on_h)||sch.on_h<0||sch.on_h>23||
+!Number.isInteger(sch.off_h)||sch.off_h<0||sch.off_h>23||
+!Number.isInteger(sch.on_m)||sch.on_m<0||sch.on_m>59||
+!Number.isInteger(sch.off_m)||sch.off_m<0||sch.off_m>59){
+alert("Giờ hoặc phút không hợp lệ!");
+return;
+}
+if(!mqttConnected())return;
+pendingSchedules[id]={...sch};
+scheduleDirty[id]=true;
+let note=document.getElementById(`schedule-note-${id}`);
+note.innerText="Đang lưu...";
+note.style.color="#17a2b8";
+sendMQTT({schedule_relay:id,enable:sch.en,on_h:sch.on_h,on_m:sch.on_m,off_h:sch.off_h,off_m:sch.off_m});
+}
+
+function sameSchedule(a,b){
+if(!a||!b)return false;
+return Boolean(a.en)===Boolean(b.en)&&Number(a.on_h)===Number(b.on_h)&&Number(a.on_m)===Number(b.on_m)&&Number(a.off_h)===Number(b.off_h)&&Number(a.off_m)===Number(b.off_m);
+}
+
+// CẬP NHẬT GIAO DIỆN
+function updateUI(data){
+// OTA
+if(data.ota!==undefined){
+if(data.ota==="downloading"){
+otaRequested=true;otaStarted=true;otaReconnectPending=false;
+setOTAStatus("ESP32 đang tải firmware từ GitHub...","#17a2b8",50);
+}else if(data.ota==="failed"){
+otaRequested=false;otaStarted=false;otaReconnectPending=false;
+setOTAStatus("CẬP NHẬT THẤT BẠI! Kiểm tra Wi-Fi hoặc file firmware.","#dc3545",0);
+}else if(data.ota==="wifi_error"){
+otaRequested=false;otaStarted=false;
+setOTAStatus("ESP32 không có kết nối Wi-Fi!","#dc3545",0);
+}else if(data.ota==="no_update"){
+otaRequested=false;otaStarted=false;
+setOTAStatus("Không có bản cập nhật mới.","#666",0);
+}else if(data.ota==="busy"){
+otaRequested=false;otaStarted=false;
+setOTAStatus("ESP32 đang thực hiện một tác vụ cập nhật khác.","#dc3545",0);
+}else if(data.ota==="idle"&&otaReconnectPending){
+otaRequested=false;otaStarted=false;otaReconnectPending=false;
+setOTAStatus("ESP32 đã kết nối lại sau cập nhật.","#28a745",100);
+}
+}
+
+// ÂM LƯỢNG TỪ ESP32
+if(data.volume!==undefined&&!volumeDirty){
+let volume=Math.max(0,Math.min(100,Number(data.volume)));
+document.getElementById("volume-slider").value=volume;
+document.getElementById("volume-value").innerText=volume+"%";
+document.getElementById("volume-note").innerText="Âm lượng đã đồng bộ với ESP32.";
+}
+
+// RELAY
+if(data.relays){
+for(let i=0;i<8;i++){
+let isOn=data.relays[i]===1||data.relays[i]===true;
+let btn=document.getElementById(`btn-${i}`);
+let statusText=document.getElementById(`status-text-${i}`);
+if(!btn||!statusText)continue;
+if(isOn){
+btn.className="btn btn-off";
+btn.innerText="TẮT (OFF)";
+statusText.innerText="Trạng thái: Đang Bật";
+}else{
+btn.className="btn btn-on";
+btn.innerText="BẬT (ON)";
+statusText.innerText="Trạng thái: Đang Tắt";
+}
+}
+}
+
+// TÊN RELAY
+if(data.names){
+for(let i=0;i<8;i++){
+let receivedName=data.names[i];
+if(!receivedName)continue;
+let input=document.getElementById(`name-${i}`);
+let title=document.getElementById(`title-${i}`);
+let note=document.getElementById(`name-note-${i}`);
+if(!nameDirty[i]){
+input.value=receivedName;
+title.innerText=receivedName;
+}else if(receivedName===pendingNames[i]){
+nameDirty[i]=false;
+pendingNames[i]="";
+input.value=receivedName;
+title.innerText=receivedName;
+note.innerText="Đã lưu tên";
+note.style.color="#28a745";
+}
+}
+}
+
+// LỊCH
+if(data.schedules){
+for(let i=0;i<8;i++){
+let sch=data.schedules[i];
+if(!sch)continue;
+let chkBox=document.getElementById(`en-${i}`);
+let onH=document.getElementById(`on-h-${i}`);
+let onM=document.getElementById(`on-m-${i}`);
+let offH=document.getElementById(`off-h-${i}`);
+let offM=document.getElementById(`off-m-${i}`);
+let note=document.getElementById(`schedule-note-${i}`);
+if(!scheduleDirty[i]){
+chkBox.checked=Boolean(sch.en);
+onH.value=sch.on_h;
+onM.value=sch.on_m;
+offH.value=sch.off_h;
+offM.value=sch.off_m;
+}else if(sameSchedule(sch,pendingSchedules[i])){
+scheduleDirty[i]=false;
+pendingSchedules[i]=null;
+chkBox.checked=Boolean(sch.en);
+onH.value=sch.on_h;
+onM.value=sch.on_m;
+offH.value=sch.off_h;
+offM.value=sch.off_m;
+note.innerText="Đã lưu lịch";
+note.style.color="#28a745";
+}
+}
+}
+}
+
+// OTA
+function startOTA(){
+if(!mqttConnected())return;
+if(otaStarted){
+alert("ESP32 đang cập nhật firmware!");
+return;
+}
+const confirmUpdate=confirm("Bạn có chắc chắn muốn cập nhật firmware ESP32?\n\nESP32 sẽ tải firmware mới từ GitHub và tự khởi động lại.\n\nKhông ngắt nguồn trong quá trình cập nhật.");
+if(!confirmUpdate)return;
+try{
+let message=new Paho.MQTT.Message("UPDATE");
+message.destinationName=CONTROL_TOPIC;
+client.send(message);
+otaRequested=true;otaStarted=true;otaReconnectPending=false;
+setOTAStatus("Đã gửi lệnh. Đang chờ ESP32 phản hồi...","#17a2b8",0);
+}catch(error){
+otaRequested=false;otaStarted=false;
+setOTAStatus("Không gửi được lệnh cập nhật!","#dc3545",0);
+console.error("OTA SEND ERROR:",error);
+}
+}
+
+// MQTT NHẬN DỮ LIỆU
+client.onMessageArrived=function(message){
+if(message.destinationName===STATUS_TOPIC){
+try{
+let data=JSON.parse(message.payloadString);
+updateUI(data);
+}catch(e){console.log("JSON ERROR:",e);}
+}
+};
+
+// MẤT KẾT NỐI
+client.onConnectionLost=function(responseObject){
+let st=document.getElementById("mqtt-status");
+st.innerText="Trạng thái MQTT: Mất kết nối!";
+st.style.color="red";
+console.log("MQTT connection lost:",responseObject.errorMessage);
+if(otaStarted){
+otaReconnectPending=true;
+setOTAStatus("ESP32 đang cập nhật hoặc khởi động lại...","#17a2b8",75);
+}
+setTimeout(startConnect,5000);
+};
+
+// KẾT NỐI MQTT
+function startConnect(){
+if(client.isConnected())return;
+client.connect({
+useSSL:true,
+onSuccess:function(){
+let st=document.getElementById("mqtt-status");
+st.innerText="Trạng thái MQTT: Đã kết nối thành công!";
+st.style.color="#28a745";
+client.subscribe(STATUS_TOPIC);
+},
+onFailure:function(error){
+let st=document.getElementById("mqtt-status");
+st.innerText="Trạng thái MQTT: Kết nối thất bại!";
+st.style.color="red";
+console.log("MQTT error:",error);
+setTimeout(startConnect,5000);
+}
+});
+}
+
+// KHỞI ĐỘNG
+buildGrid();
+startConnect();
+</script>
 </body>
 </html>
