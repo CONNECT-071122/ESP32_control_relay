@@ -43,7 +43,7 @@ h2{color:#333}
 </head>
 <body>
 <h2>ĐIỀU KHIỂN VÀ GIÁM SÁT</h2>
-<div><div class="status-box" id="mqtt-status">Trạng thái MQTT: Đang kết nối...</div></div>
+<div><div class="status-box" id="mqtt-status">MQTT Web: Đang kết nối | ESP32: Chưa xác định</div></div>
 
 <!-- OTA -->
 <div class="ota-box">
@@ -89,6 +89,41 @@ let otaRequested=false;
 let otaStarted=false;
 let otaReconnectPending=false;
 let volumeDirty=false;
+
+// GIÁM SÁT ESP32: không dùng trạng thái kết nối MQTT của trình duyệt
+// làm bằng chứng ESP32 đang online.
+let mqttBrokerConnected=false;
+let espLastSeen=0;
+let validStatusCount=0;
+const ESP_TIMEOUT=6000;
+
+function updateConnectionStatus(){
+    const st=document.getElementById("mqtt-status");
+
+    if(!mqttBrokerConnected){
+        st.innerText="MQTT Web: Mất kết nối | ESP32: Không xác định";
+        st.style.color="#dc3545";
+        return;
+    }
+
+    if(espLastSeen===0 || validStatusCount<2){
+        st.innerText="MQTT Web: Đã kết nối | ESP32: Đang chờ phản hồi...";
+        st.style.color="#17a2b8";
+        return;
+    }
+
+    if(Date.now()-espLastSeen>ESP_TIMEOUT){
+        st.innerText="MQTT Web: Đã kết nối | ESP32: OFFLINE";
+        st.style.color="#dc3545";
+    }else{
+        st.innerText="MQTT Web: Đã kết nối | ESP32: ONLINE";
+        st.style.color="#28a745";
+    }
+}
+
+// Kiểm tra định kỳ để phát hiện ESP32 ngừng gửi trạng thái,
+// kể cả khi trình duyệt vẫn còn kết nối MQTT Broker.
+setInterval(updateConnectionStatus,1000);
 
 function setOTAStatus(message,color,progress){
 document.getElementById("ota-status").innerText=message;
@@ -384,39 +419,52 @@ client.onMessageArrived=function(message){
 if(message.destinationName===STATUS_TOPIC){
 try{
 let data=JSON.parse(message.payloadString);
+
+// Chỉ coi là heartbeat khi nhận được gói trạng thái có đủ 8 relay.
+// Các gói OTA riêng lẻ không làm ESP32 bị hiểu nhầm là đang online.
+if(Array.isArray(data.relays)&&data.relays.length>=8){
+    espLastSeen=Date.now();
+    validStatusCount=Math.min(validStatusCount+1,2);
+    updateConnectionStatus();
+}
+
 updateUI(data);
-}catch(e){console.log("JSON ERROR:",e);}
+}catch(e){
+console.log("JSON ERROR:",e);
+}
 }
 };
 
 // MẤT KẾT NỐI
 client.onConnectionLost=function(responseObject){
-let st=document.getElementById("mqtt-status");
-st.innerText="Trạng thái MQTT: Mất kết nối!";
-st.style.color="red";
+mqttBrokerConnected=false;
+updateConnectionStatus();
 console.log("MQTT connection lost:",responseObject.errorMessage);
+
 if(otaStarted){
 otaReconnectPending=true;
 setOTAStatus("ESP32 đang cập nhật hoặc khởi động lại...","#17a2b8",75);
 }
+
 setTimeout(startConnect,5000);
 };
 
 // KẾT NỐI MQTT
 function startConnect(){
 if(client.isConnected())return;
+
 client.connect({
 useSSL:true,
 onSuccess:function(){
-let st=document.getElementById("mqtt-status");
-st.innerText="Trạng thái MQTT: Đã kết nối thành công!";
-st.style.color="#28a745";
+mqttBrokerConnected=true;
+espLastSeen=0;
+validStatusCount=0;
+updateConnectionStatus();
 client.subscribe(STATUS_TOPIC);
 },
 onFailure:function(error){
-let st=document.getElementById("mqtt-status");
-st.innerText="Trạng thái MQTT: Kết nối thất bại!";
-st.style.color="red";
+mqttBrokerConnected=false;
+updateConnectionStatus();
 console.log("MQTT error:",error);
 setTimeout(startConnect,5000);
 }
